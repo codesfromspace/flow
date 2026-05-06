@@ -101,7 +101,10 @@ export default function ActivationCurve({ data, medications, currentTime }: Acti
             tick={{ fill: 'rgb(100, 116, 139)', fontSize: 12 }}
             axisLine={false}
             tickLine={false}
-            label={{ value: 'Concentration', angle: -90, position: 'insideLeft' }}
+            domain={[0, 1]}
+            ticks={[0, 0.25, 0.5, 0.75, 1]}
+            tickFormatter={(value) => `${Math.round(value * 100)}%`}
+            label={{ value: 'Concentration (%)', angle: -90, position: 'insideLeft' }}
           />
           <Tooltip content={<CustomTooltip />} />
           <Legend height={20} wrapperStyle={{ paddingBottom: 0 }} />
