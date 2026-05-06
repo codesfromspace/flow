@@ -13,7 +13,9 @@ import PharmacologyInfo from '@/components/widgets/PharmacologyInfo';
 import ActivationCurve from '@/components/charts/ActivationCurve';
 import DailyTimeline from '@/components/charts/DailyTimeline';
 import QuickLogForm from '@/components/core/QuickLogForm';
+import DraggableWidget from '@/components/core/DraggableWidget';
 import { useIndexedDB } from '@/lib/hooks/useIndexedDB';
+import { useWidgetOrder } from '@/lib/hooks/useWidgetOrder';
 import { generateMockData, generateTimelineData } from '@/lib/utils/mock-data';
 import {
   calculateCumulativeConcentration,
@@ -32,6 +34,7 @@ import { CognitiveLog, MedicationProfile } from '@/types';
 
 export default function Dashboard() {
   const { isInitialized, getMedicationProfiles } = useIndexedDB();
+  const { widgetOrder, moveWidget } = useWidgetOrder();
   const [medications, setMedications] = useState<MedicationProfile[]>([]);
   const [logs, setLogs] = useState<CognitiveLog[]>([]);
   const [currentTime, setCurrentTime] = useState(Date.now());
@@ -167,6 +170,92 @@ export default function Dashboard() {
     setLogs([...logs, log]);
   };
 
+  const renderWidget = (widgetId: string, index: number) => {
+    const canMoveUp = index > 0;
+    const canMoveDown = index < widgetOrder.length - 1;
+
+    const onMoveUp = () => moveWidget(index, index - 1);
+    const onMoveDown = () => moveWidget(index, index + 1);
+
+    const wrapperProps = { canMoveUp, canMoveDown, onMoveUp, onMoveDown };
+
+    switch (widgetId) {
+      case 'cognitive-state':
+        return (
+          <DraggableWidget key={widgetId} id={widgetId} {...wrapperProps}>
+            <CurrentCognitiveState
+              focusLevel={focusLevel}
+              overstimulated={focusLevel > 85}
+              activeMedications={activeMeds}
+            />
+          </DraggableWidget>
+        );
+      case 'focus-quality':
+        return (
+          <DraggableWidget key={widgetId} id={widgetId} {...wrapperProps}>
+            <EstimatedFocus percentage={focusLevel} trend={focusLevel > 70 ? 'stable' : 'down'} />
+          </DraggableWidget>
+        );
+      case 'rebound-risk':
+        return (
+          <DraggableWidget key={widgetId} id={widgetId} {...wrapperProps}>
+            <ReboundRisk level={reboundRisk} />
+          </DraggableWidget>
+        );
+      case 'sleep-pressure':
+        return (
+          <DraggableWidget key={widgetId} id={widgetId} {...wrapperProps}>
+            <SleepPressure pressure={sleepPressure} hoursAwake={(Date.now() - dayStart) / (60 * 60 * 1000)} />
+          </DraggableWidget>
+        );
+      case 'mental-load':
+        return (
+          <DraggableWidget key={widgetId} id={widgetId} {...wrapperProps}>
+            <MentalLoad load={estimateMentalLoad(3, focusLevel / 100)} capacity={75} />
+          </DraggableWidget>
+        );
+      case 'hydration-reminder':
+        return (
+          <DraggableWidget key={widgetId} id={widgetId} {...wrapperProps}>
+            <HydrationReminder level={hydrationLevel} concentration={focusLevel / 100} />
+          </DraggableWidget>
+        );
+      case 'activation-curve':
+        return (
+          <DraggableWidget key={widgetId} id={widgetId} {...wrapperProps}>
+            <div className="lg:col-span-2">
+              {timelineData.length > 0 && (
+                <ActivationCurve
+                  data={timelineData}
+                  medications={medications.map((m) => ({
+                    name: m.name,
+                    color: '#22d3ee',
+                    doseTime: 0,
+                  }))}
+                  currentTime={currentTime}
+                />
+              )}
+            </div>
+          </DraggableWidget>
+        );
+      case 'daily-timeline':
+        return (
+          <DraggableWidget key={widgetId} id={widgetId} {...wrapperProps}>
+            {todayEvents.length > 0 && (
+              <DailyTimeline
+                events={todayEvents}
+                currentTime={currentTime}
+                dayStart={dayStart}
+                dayEnd={dayEnd}
+              />
+            )}
+          </DraggableWidget>
+        );
+      default:
+        return null;
+    }
+  };
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const dayStart = today.getTime();
@@ -207,32 +296,12 @@ export default function Dashboard() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 auto-rows-max">
-          <CurrentCognitiveState
-            focusLevel={focusLevel}
-            overstimulated={focusLevel > 85}
-            activeMedications={activeMeds}
-          />
-
-          <EstimatedFocus percentage={focusLevel} trend={focusLevel > 70 ? 'stable' : 'down'} />
-          <ReboundRisk level={reboundRisk} />
-          <SleepPressure pressure={sleepPressure} hoursAwake={(Date.now() - dayStart) / (60 * 60 * 1000)} />
-          <MentalLoad load={estimateMentalLoad(3, focusLevel / 100)} capacity={75} />
-          <HydrationReminder level={hydrationLevel} concentration={focusLevel / 100} />
+          {widgetOrder.slice(0, 6).map((widgetId, idx) => renderWidget(widgetId, idx))}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
-            {timelineData.length > 0 && (
-              <ActivationCurve
-                data={timelineData}
-                medications={medications.map((m) => ({
-                  name: m.name,
-                  color: '#22d3ee',
-                  doseTime: 0,
-                }))}
-                currentTime={currentTime}
-              />
-            )}
+            {widgetOrder.includes('activation-curve') && renderWidget('activation-curve', widgetOrder.indexOf('activation-curve'))}
           </div>
 
           <div className="lg:col-span-1">
@@ -240,16 +309,11 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-6">
-          {todayEvents.length > 0 && (
-            <DailyTimeline
-              events={todayEvents}
-              currentTime={currentTime}
-              dayStart={dayStart}
-              dayEnd={dayEnd}
-            />
-          )}
-        </div>
+        {widgetOrder.includes('daily-timeline') && (
+          <div className="grid grid-cols-1 gap-6">
+            {renderWidget('daily-timeline', widgetOrder.indexOf('daily-timeline'))}
+          </div>
+        )}
 
         <div className="text-center text-muted text-xs pt-8 border-t border-card-border/30">
           <p>Synapse Flow • Local-first cognitive tracking • v0.1.0</p>
