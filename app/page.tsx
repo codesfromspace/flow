@@ -42,6 +42,7 @@ export default function Dashboard() {
   const [timelineData, setTimelineData] = useState<any[]>([]);
   const [hydrationLevel, setHydrationLevel] = useState<1 | 2 | 3 | 4 | 5>(3);
   const [isInfoOpen, setIsInfoOpen] = useState(false);
+  const [userProfile, setUserProfile] = useState<{ wakeUpTime?: string }>({});
 
   useEffect(() => {
     if (!isInitialized) return;
@@ -70,6 +71,28 @@ export default function Dashboard() {
   }, [isInitialized, getMedicationProfiles]);
 
   useEffect(() => {
+    const loadUserProfile = () => {
+      try {
+        const dbRequest = indexedDB.open('SynapseFlow', 1);
+        dbRequest.onsuccess = () => {
+          const db = dbRequest.result;
+          const tx = db.transaction(['settings'], 'readonly');
+          const store = tx.objectStore('settings');
+          const request = store.get('userProfile');
+          request.onsuccess = () => {
+            if (request.result) {
+              setUserProfile(request.result.value);
+            }
+          };
+        };
+      } catch (err) {
+        console.error('Failed to load user profile:', err);
+      }
+    };
+    loadUserProfile();
+  }, []);
+
+  useEffect(() => {
     const updateState = () => {
       const now = Date.now();
       setCurrentTime(now);
@@ -95,11 +118,21 @@ export default function Dashboard() {
       const focus = Math.round(estimateFocusFromConcentration(concentration, 50));
       const rebound = estimateReboundRisk(concentration, now);
 
-      const lastSleepTime = logs
+      let lastSleepTime = logs
         .filter((log) => log.logType === 'sleep')
         .map((log) => log.data.wokeUpAt || log.data.date)
         .sort()
         .pop() || now - 8 * 60 * 60 * 1000;
+
+      if (userProfile.wakeUpTime) {
+        const [hours, minutes] = userProfile.wakeUpTime.split(':').map(Number);
+        const today = new Date();
+        today.setHours(hours, minutes, 0, 0);
+        const wakeTime = today.getTime();
+        if (wakeTime <= now) {
+          lastSleepTime = wakeTime;
+        }
+      }
 
       const lastSleepQuality = logs
         .filter((log) => log.logType === 'sleep')

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CognitiveLog } from '@/types';
 
 interface InfoModalProps {
@@ -9,9 +9,40 @@ interface InfoModalProps {
   logs: CognitiveLog[];
 }
 
+interface UserProfile {
+  age?: number;
+  weight?: number;
+  height?: number;
+  wakeUpTime?: string;
+}
+
 export default function InfoModal({ isOpen, onClose, logs }: InfoModalProps) {
   const [activeTab, setActiveTab] = useState<'info' | 'export' | 'settings'>('info');
   const [exportStatus, setExportStatus] = useState('');
+  const [userProfile, setUserProfile] = useState<UserProfile>({});
+  const [profileSaved, setProfileSaved] = useState(false);
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const dbRequest = indexedDB.open('SynapseFlow', 1);
+        dbRequest.onsuccess = () => {
+          const db = dbRequest.result;
+          const tx = db.transaction(['settings'], 'readonly');
+          const store = tx.objectStore('settings');
+          const request = store.get('userProfile');
+          request.onsuccess = () => {
+            if (request.result) {
+              setUserProfile(request.result.value);
+            }
+          };
+        };
+      } catch (err) {
+        console.error('Failed to load profile:', err);
+      }
+    };
+    if (isOpen) loadProfile();
+  }, [isOpen]);
 
   const generateMarkdown = () => {
     const date = new Date().toLocaleString('cs-CZ');
@@ -63,6 +94,24 @@ ${sleepLogs.map(log => `- Kvalita: ${log.data.quality}/5, Trvání: ${log.data.d
       setTimeout(() => setExportStatus(''), 3000);
     } catch (err) {
       setExportStatus('✗ Chyba při exportu');
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    try {
+      const dbRequest = indexedDB.open('SynapseFlow', 1);
+      dbRequest.onsuccess = () => {
+        const db = dbRequest.result;
+        const tx = db.transaction(['settings'], 'readwrite');
+        tx.objectStore('settings').put({
+          key: 'userProfile',
+          value: userProfile,
+        });
+        setProfileSaved(true);
+        setTimeout(() => setProfileSaved(false), 2000);
+      };
+    } catch (err) {
+      console.error('Failed to save profile:', err);
     }
   };
 
@@ -198,8 +247,68 @@ ${sleepLogs.map(log => `- Kvalita: ${log.data.quality}/5, Trvání: ${log.data.d
           )}
 
           {activeTab === 'settings' && (
-            <div className="space-y-4">
+            <div className="space-y-6">
               <h3 className="text-lg font-medium">Nastavení</h3>
+
+              <div className="space-y-4 border-b border-card-border/30 pb-4">
+                <h4 className="font-medium text-sm">👤 Osobní profil</h4>
+                <p className="text-xs text-muted mb-3">Tyto údaje se používají pro přesnější výpočty farmakokinetikou</p>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-medium text-muted block mb-2">Věk (roky)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="120"
+                      value={userProfile.age || ''}
+                      onChange={(e) => setUserProfile({ ...userProfile, age: e.target.value ? parseInt(e.target.value) : undefined })}
+                      className="w-full px-3 py-2 bg-card-bg border border-card-border/30 rounded text-sm text-foreground"
+                      placeholder="např. 28"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted block mb-2">Váha (kg)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      value={userProfile.weight || ''}
+                      onChange={(e) => setUserProfile({ ...userProfile, weight: e.target.value ? parseFloat(e.target.value) : undefined })}
+                      className="w-full px-3 py-2 bg-card-bg border border-card-border/30 rounded text-sm text-foreground"
+                      placeholder="např. 75.5"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted block mb-2">Výška (cm)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={userProfile.height || ''}
+                      onChange={(e) => setUserProfile({ ...userProfile, height: e.target.value ? parseInt(e.target.value) : undefined })}
+                      className="w-full px-3 py-2 bg-card-bg border border-card-border/30 rounded text-sm text-foreground"
+                      placeholder="např. 180"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted block mb-2">Čas probuzení</label>
+                    <input
+                      type="time"
+                      value={userProfile.wakeUpTime || ''}
+                      onChange={(e) => setUserProfile({ ...userProfile, wakeUpTime: e.target.value })}
+                      className="w-full px-3 py-2 bg-card-bg border border-card-border/30 rounded text-sm text-foreground"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleSaveProfile}
+                  className="w-full px-4 py-2 rounded-lg bg-accent-cyan/20 text-accent-cyan hover:bg-accent-cyan/30 transition text-sm font-medium"
+                >
+                  💾 Uložit profil
+                </button>
+                {profileSaved && <p className="text-xs text-accent-cyan">✓ Profil uložen</p>}
+              </div>
 
               <div className="space-y-3">
                 <h4 className="font-medium text-sm">Správa dat</h4>

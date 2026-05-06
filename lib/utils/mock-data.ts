@@ -49,12 +49,14 @@ export function generateTimelineData(startTime: number, endTime: number, doses: 
     });
 
     const focus = Math.round(estimateFocusFromConcentration(totalConcentration, 50));
+    const idealFocus = Math.max(0, Math.min(100, 75 - Math.abs(50 - focus) * 0.3));
 
     points.push({
       time: timeStr,
       timestamp: time,
       concentration: Math.min(totalConcentration, 1),
       focus: Math.max(0, Math.min(100, focus)),
+      optimalFocus: idealFocus,
     });
   }
 

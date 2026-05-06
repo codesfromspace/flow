@@ -1,6 +1,6 @@
 'use client';
 
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Legend } from 'recharts';
 
 interface DataPoint {
   time: string;
@@ -104,6 +104,7 @@ export default function ActivationCurve({ data, medications, currentTime }: Acti
             label={{ value: 'Concentration', angle: -90, position: 'insideLeft' }}
           />
           <Tooltip content={<CustomTooltip />} />
+          <Legend height={20} wrapperStyle={{ paddingBottom: 0 }} />
 
           {timing && (
             <>
@@ -139,6 +140,19 @@ export default function ActivationCurve({ data, medications, currentTime }: Acti
             fill="url(#colorConcentration)"
             isAnimationActive={true}
             animationDuration={500}
+            name="Actual"
+          />
+
+          <Area
+            type="monotone"
+            dataKey="optimalFocus"
+            stroke="#94a3b8"
+            strokeWidth={2}
+            strokeDasharray="5 5"
+            fill="none"
+            isAnimationActive={false}
+            name="Ideal"
+            opacity={0.6}
           />
         </AreaChart>
       </ResponsiveContainer>
