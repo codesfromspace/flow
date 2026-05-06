@@ -1,36 +1,37 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Synapse Flow
 
-## Getting Started
+Local-first cognitive tracking dashboard for logging medication doses, focus, mood, sleep pressure, hydration context, and daily activation trends.
 
-First, run the development server:
+## What It Does
+
+- Stores all logs locally in IndexedDB.
+- Models medication activation deterministically from dose time, dose amount, onset, peak, half-life, duration, and medication strength.
+- Lets doses be logged for now, 15 minutes ago, 30 minutes ago, or a custom time.
+- Supports custom medication profiles from the settings modal.
+- Provides reorderable dashboard widgets with persisted widget order.
+- Exports local logs as Markdown.
+
+## Run
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Build
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+```
 
-## Learn More
+The project should live in a path without a literal backslash character. A directory named `claude\ code` can break Node/Next module resolution because package paths become invalid encoded `file://` URLs.
 
-To learn more about Next.js, take a look at the following resources:
+## Data And Privacy
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Synapse Flow is local-first. It does not sync data to an external service. Clearing browser storage or deleting IndexedDB data removes the app's stored logs and settings.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Medical Disclaimer
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This app is for personal tracking and estimation only. It is not medical advice, diagnosis, or dosage guidance. Medication timing, dose changes, side effects, and treatment decisions should be handled with a qualified clinician.

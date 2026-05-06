@@ -1,6 +1,8 @@
 'use client';
 
 import { ReactNode, useState } from 'react';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface DraggableWidgetProps {
   id: string;
@@ -20,9 +22,18 @@ export default function DraggableWidget({
   canMoveDown = true,
 }: DraggableWidgetProps) {
   const [showControls, setShowControls] = useState(false);
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 30 : undefined,
+    opacity: isDragging ? 0.75 : 1,
+  };
 
   return (
     <div
+      ref={setNodeRef}
+      style={style}
       className="relative group"
       onMouseEnter={() => setShowControls(true)}
       onMouseLeave={() => setShowControls(false)}
@@ -48,9 +59,15 @@ export default function DraggableWidget({
             ⬇️
           </button>
           <div className="w-px bg-card-border/30" />
-          <span className="px-2 py-1 text-xs text-muted cursor-grab active:cursor-grabbing select-none">
+          <button
+            type="button"
+            className="px-2 py-1 text-xs text-muted cursor-grab active:cursor-grabbing select-none"
+            title="Přetáhnout widget"
+            {...attributes}
+            {...listeners}
+          >
             ⋮⋮
-          </span>
+          </button>
         </div>
       )}
     </div>

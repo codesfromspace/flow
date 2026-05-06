@@ -1,6 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import {
+  DndContext,
+  DragEndEvent,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import { SortableContext, rectSortingStrategy } from '@dnd-kit/sortable';
 import Header from '@/components/layout/Header';
 import InfoModal from '@/components/layout/InfoModal';
 import CurrentCognitiveState from '@/components/widgets/CurrentCognitiveState';
@@ -25,27 +34,40 @@ import {
   estimateMentalLoad,
   MEDICATION_PRESETS,
 } from '@/lib/utils/cognitive-math';
-import {
-  addLog,
-  addMedicationProfile,
-  getAllLogs,
-} from '@/lib/store/db';
-import { CognitiveLog, MedicationProfile } from '@/types';
+import { addLog, addMedicationProfile, getAllLogs, getSetting } from '@/lib/store/db';
+import { CognitiveLog, MedicationLog, MedicationProfile, UserProfile } from '@/types';
+
+const INITIAL_TIME = 0;
+
+interface TimelineEvent {
+  time: number;
+  type: 'medication' | 'mood_check' | 'deep_work' | 'rebound' | 'crash';
+  label: string;
+}
+
+interface ActivationDataPoint {
+  time: string;
+  concentration: number;
+  focus: number;
+  timestamp: number;
+  optimalFocus: number;
+}
 
 export default function Dashboard() {
   const { isInitialized, getMedicationProfiles } = useIndexedDB();
   const { widgetOrder, moveWidget } = useWidgetOrder();
   const [medications, setMedications] = useState<MedicationProfile[]>([]);
   const [logs, setLogs] = useState<CognitiveLog[]>([]);
-  const [currentTime, setCurrentTime] = useState(Date.now());
+  const [currentTime, setCurrentTime] = useState(INITIAL_TIME);
   const [sleepPressure, setSleepPressure] = useState(45);
   const [focusLevel, setFocusLevel] = useState(65);
   const [reboundRisk, setReboundRisk] = useState<'none' | 'low' | 'medium' | 'high'>('low');
   const [activeMeds, setActiveMeds] = useState<string[]>([]);
-  const [timelineData, setTimelineData] = useState<any[]>([]);
-  const [hydrationLevel, setHydrationLevel] = useState<1 | 2 | 3 | 4 | 5>(3);
+  const [timelineData, setTimelineData] = useState<ActivationDataPoint[]>([]);
+  const [hydrationLevel] = useState<1 | 2 | 3 | 4 | 5>(3);
   const [isInfoOpen, setIsInfoOpen] = useState(false);
-  const [userProfile, setUserProfile] = useState<{ wakeUpTime?: string }>({});
+  const [userProfile, setUserProfile] = useState<UserProfile>({});
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   useEffect(() => {
     if (!isInitialized) return;
@@ -54,18 +76,16 @@ export default function Dashboard() {
       const existingLogs = await getAllLogs();
 
       if (existingLogs.length === 0) {
-        const { logs: mockLogs, medications: mockMeds } = generateMockData(7);
-        for (const med of mockMeds) {
-          await addMedicationProfile(med);
-        }
-        for (const log of mockLogs) {
-          await addLog(log);
-        }
+        const { logs: mockLogs, medications: mockMeds } = generateMockData();
+        await Promise.all([
+          ...mockMeds.map((med) => addMedicationProfile(med)),
+          ...mockLogs.map((log) => addLog(log)),
+        ]);
         setLogs(mockLogs);
         setMedications(mockMeds);
       } else {
-        setLogs(existingLogs);
         const meds = await getMedicationProfiles();
+        setLogs(existingLogs);
         setMedications(meds);
       }
     };
@@ -74,52 +94,38 @@ export default function Dashboard() {
   }, [isInitialized, getMedicationProfiles]);
 
   useEffect(() => {
-    const loadUserProfile = () => {
-      try {
-        const dbRequest = indexedDB.open('SynapseFlow', 1);
-        dbRequest.onsuccess = () => {
-          const db = dbRequest.result;
-          const tx = db.transaction(['settings'], 'readonly');
-          const store = tx.objectStore('settings');
-          const request = store.get('userProfile');
-          request.onsuccess = () => {
-            if (request.result) {
-              setUserProfile(request.result.value);
-            }
-          };
-        };
-      } catch (err) {
-        console.error('Failed to load user profile:', err);
-      }
-    };
-    loadUserProfile();
-  }, []);
+    if (!isInitialized) return;
+
+    getSetting<UserProfile>('userProfile')
+      .then((profile) => {
+        if (profile) setUserProfile(profile);
+      })
+      .catch((err) => console.error('Failed to load user profile:', err));
+  }, [isInitialized]);
 
   useEffect(() => {
     const updateState = () => {
       const now = Date.now();
       setCurrentTime(now);
 
+      const medicationById = new Map(medications.map((medication) => [medication.id, medication]));
       const recentDoses = logs
-        .filter((log) => log.logType === 'medication')
+        .filter((log): log is MedicationLog => log.logType === 'medication')
         .filter((log) => now - log.timestamp.getTime() < 24 * 60 * 60 * 1000)
-        .map((log) => ({
-          timestamp: log.timestamp.getTime(),
-          dose: log.data.dose,
-          profile: MEDICATION_PRESETS[log.data.medicationId] || Object.values(MEDICATION_PRESETS)[0],
-        }));
+        .flatMap((log) => {
+          const profile = medicationById.get(log.data.medicationId) ?? MEDICATION_PRESETS[log.data.medicationId];
+          if (!profile) return [];
 
-      const { total: concentration, byMedication } = calculateCumulativeConcentration(
-        recentDoses.map((d) => ({
-          timestamp: d.timestamp,
-          dose: d.dose,
-          profile: d.profile,
-        })),
-        now
-      );
+          return [{
+            timestamp: log.data.takenAt ?? log.timestamp.getTime(),
+            dose: log.data.dose,
+            profile,
+          }];
+        });
 
+      const { total: concentration, byMedication } = calculateCumulativeConcentration(recentDoses, now);
       const focus = Math.round(estimateFocusFromConcentration(concentration, 50));
-      const rebound = estimateReboundRisk(concentration, now);
+      const rebound = estimateReboundRisk(concentration);
 
       let lastSleepTime = logs
         .filter((log) => log.logType === 'sleep')
@@ -132,9 +138,7 @@ export default function Dashboard() {
         const today = new Date();
         today.setHours(hours, minutes, 0, 0);
         const wakeTime = today.getTime();
-        if (wakeTime <= now) {
-          lastSleepTime = wakeTime;
-        }
+        if (wakeTime <= now) lastSleepTime = wakeTime;
       }
 
       const lastSleepQuality = logs
@@ -143,51 +147,76 @@ export default function Dashboard() {
         .map((log) => log.data.quality)
         .shift() || 3;
 
-      const sleepP = calculateSleepPressure(lastSleepTime, now, lastSleepQuality);
-
       setFocusLevel(focus);
       setReboundRisk(rebound);
-      setSleepPressure(sleepP);
-      setActiveMeds(Object.keys(byMedication).filter((k) => byMedication[k] > 0.1));
+      setSleepPressure(calculateSleepPressure(lastSleepTime, now, lastSleepQuality));
+      setActiveMeds(Object.keys(byMedication).filter((key) => byMedication[key] > 0.1));
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const dayStart = today.getTime();
       const dayEnd = dayStart + 24 * 60 * 60 * 1000;
-
-      const todayDoses = recentDoses.filter((d) => d.timestamp >= dayStart);
-      const timelineData = generateTimelineData(dayStart, dayEnd, todayDoses);
-      setTimelineData(timelineData);
+      setTimelineData(generateTimelineData(dayStart, dayEnd, recentDoses.filter((dose) => dose.timestamp >= dayStart)));
     };
 
     updateState();
     const interval = setInterval(updateState, 60000);
     return () => clearInterval(interval);
-  }, [logs]);
+  }, [logs, medications, userProfile.wakeUpTime]);
 
   const handleLog = async (log: CognitiveLog) => {
     await addLog(log);
-    setLogs([...logs, log]);
+    setLogs((currentLogs) => [...currentLogs, log].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime()));
   };
 
+  const handleMedicationSaved = (profile: MedicationProfile) => {
+    setMedications((currentMedications) => [...currentMedications, profile]);
+  };
+
+  const handleWidgetDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = widgetOrder.indexOf(String(active.id));
+    const newIndex = widgetOrder.indexOf(String(over.id));
+    if (oldIndex !== -1 && newIndex !== -1) moveWidget(oldIndex, newIndex);
+  };
+
+  const today = new Date(currentTime || Date.now());
+  today.setHours(0, 0, 0, 0);
+  const dayStart = today.getTime();
+  const dayEnd = dayStart + 24 * 60 * 60 * 1000;
+
+  const todayEvents: TimelineEvent[] = logs
+    .filter((log) => log.timestamp.getTime() >= dayStart && log.timestamp.getTime() <= dayEnd)
+    .map((log) => {
+      let label = 'Sleep';
+      if (log.logType === 'medication') label = `${log.data.dose}mg ${log.data.medicationName}`;
+      let type: TimelineEvent['type'] = 'rebound';
+      if (log.logType === 'medication') type = 'medication';
+      if (log.logType === 'mood' || log.logType === 'focus') type = 'mood_check';
+      if (log.logType === 'deep_work') type = 'deep_work';
+
+      if (log.logType === 'mood') label = `Mood: ${log.data.mood}/5`;
+      if (log.logType === 'deep_work') label = 'Deep Work Session';
+      if (log.logType === 'focus') label = `Focus: ${log.data.focus}/5`;
+
+      return { time: log.timestamp.getTime(), type, label };
+    });
+
   const renderWidget = (widgetId: string, index: number) => {
-    const canMoveUp = index > 0;
-    const canMoveDown = index < widgetOrder.length - 1;
-
-    const onMoveUp = () => moveWidget(index, index - 1);
-    const onMoveDown = () => moveWidget(index, index + 1);
-
-    const wrapperProps = { canMoveUp, canMoveDown, onMoveUp, onMoveDown };
+    const wrapperProps = {
+      canMoveUp: index > 0,
+      canMoveDown: index < widgetOrder.length - 1,
+      onMoveUp: () => moveWidget(index, index - 1),
+      onMoveDown: () => moveWidget(index, index + 1),
+    };
 
     switch (widgetId) {
       case 'cognitive-state':
         return (
           <DraggableWidget key={widgetId} id={widgetId} {...wrapperProps}>
-            <CurrentCognitiveState
-              focusLevel={focusLevel}
-              overstimulated={focusLevel > 85}
-              activeMedications={activeMeds}
-            />
+            <CurrentCognitiveState focusLevel={focusLevel} overstimulated={focusLevel > 85} activeMedications={activeMeds} />
           </DraggableWidget>
         );
       case 'focus-quality':
@@ -205,7 +234,7 @@ export default function Dashboard() {
       case 'sleep-pressure':
         return (
           <DraggableWidget key={widgetId} id={widgetId} {...wrapperProps}>
-            <SleepPressure pressure={sleepPressure} hoursAwake={(Date.now() - dayStart) / (60 * 60 * 1000)} />
+            <SleepPressure pressure={sleepPressure} hoursAwake={Math.max(0, (currentTime - dayStart) / (60 * 60 * 1000))} />
           </DraggableWidget>
         );
       case 'mental-load':
@@ -223,32 +252,15 @@ export default function Dashboard() {
       case 'activation-curve':
         return (
           <DraggableWidget key={widgetId} id={widgetId} {...wrapperProps}>
-            <div className="lg:col-span-2">
-              {timelineData.length > 0 && (
-                <ActivationCurve
-                  data={timelineData}
-                  medications={medications.map((m) => ({
-                    name: m.name,
-                    color: '#22d3ee',
-                    doseTime: 0,
-                  }))}
-                  currentTime={currentTime}
-                />
-              )}
-            </div>
+            {timelineData.length > 0 ? (
+              <ActivationCurve data={timelineData} medications={medications.map((m) => ({ name: m.name, color: '#22d3ee', doseTime: 0 }))} currentTime={currentTime} />
+            ) : null}
           </DraggableWidget>
         );
       case 'daily-timeline':
         return (
           <DraggableWidget key={widgetId} id={widgetId} {...wrapperProps}>
-            {todayEvents.length > 0 && (
-              <DailyTimeline
-                events={todayEvents}
-                currentTime={currentTime}
-                dayStart={dayStart}
-                dayEnd={dayEnd}
-              />
-            )}
+            {todayEvents.length > 0 ? <DailyTimeline events={todayEvents} currentTime={currentTime} dayStart={dayStart} dayEnd={dayEnd} /> : null}
           </DraggableWidget>
         );
       default:
@@ -256,64 +268,38 @@ export default function Dashboard() {
     }
   };
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const dayStart = today.getTime();
-  const dayEnd = dayStart + 24 * 60 * 60 * 1000;
-
-  const todayEvents = logs
-    .filter((log) => log.timestamp.getTime() >= dayStart && log.timestamp.getTime() <= dayEnd)
-    .map((log) => {
-      const logType = log.logType as any;
-      let label = '';
-      if (log.logType === 'medication') {
-        label = log.data.dose + 'mg ' + log.data.medicationName;
-      } else if (log.logType === 'mood') {
-        label = 'Mood: ' + log.data.mood + '/5';
-      } else if (log.logType === 'deep_work') {
-        label = 'Deep Work Session';
-      } else {
-        label = 'Sleep';
-      }
-      return {
-        time: log.timestamp.getTime(),
-        type: logType,
-        label: label,
-      };
-    });
-
   return (
     <div className="min-h-screen bg-background">
       <Header onOpenInfo={() => setIsInfoOpen(true)} />
-      <InfoModal isOpen={isInfoOpen} onClose={() => setIsInfoOpen(false)} logs={logs} />
+      <InfoModal isOpen={isInfoOpen} onClose={() => setIsInfoOpen(false)} logs={logs} medications={medications} onMedicationSaved={handleMedicationSaved} />
 
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
-          <QuickLogForm
-            onLog={handleLog}
-            medications={medications.map((m) => ({ id: m.id, name: m.name }))}
-          />
+          <QuickLogForm onLog={handleLog} medications={medications} />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 auto-rows-max">
-          {widgetOrder.slice(0, 6).map((widgetId, idx) => renderWidget(widgetId, idx))}
-        </div>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleWidgetDragEnd}>
+          <SortableContext items={widgetOrder} strategy={rectSortingStrategy}>
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 auto-rows-max">
+              {widgetOrder.slice(0, 6).map((widgetId, idx) => renderWidget(widgetId, idx))}
+            </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            {widgetOrder.includes('activation-curve') && renderWidget('activation-curve', widgetOrder.indexOf('activation-curve'))}
-          </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2">
+                {widgetOrder.includes('activation-curve') ? renderWidget('activation-curve', widgetOrder.indexOf('activation-curve')) : null}
+              </div>
+              <div className="lg:col-span-1">
+                <PharmacologyInfo />
+              </div>
+            </div>
 
-          <div className="lg:col-span-1">
-            <PharmacologyInfo />
-          </div>
-        </div>
-
-        {widgetOrder.includes('daily-timeline') && (
-          <div className="grid grid-cols-1 gap-6">
-            {renderWidget('daily-timeline', widgetOrder.indexOf('daily-timeline'))}
-          </div>
-        )}
+            {widgetOrder.includes('daily-timeline') ? (
+              <div className="grid grid-cols-1 gap-6">
+                {renderWidget('daily-timeline', widgetOrder.indexOf('daily-timeline'))}
+              </div>
+            ) : null}
+          </SortableContext>
+        </DndContext>
 
         <div className="text-center text-muted text-xs pt-8 border-t border-card-border/30">
           <p>Synapse Flow • Local-first cognitive tracking • v0.1.0</p>

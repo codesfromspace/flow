@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { getSetting, setSetting } from '@/lib/store/db';
 
 export const DEFAULT_WIDGET_ORDER = [
   'cognitive-state',
@@ -17,18 +18,8 @@ export function useWidgetOrder() {
   useEffect(() => {
     const loadOrder = async () => {
       try {
-        const dbRequest = indexedDB.open('SynapseFlow', 1);
-        dbRequest.onsuccess = () => {
-          const db = dbRequest.result;
-          const tx = db.transaction(['settings'], 'readonly');
-          const store = tx.objectStore('settings');
-          const request = store.get('widgetOrder');
-          request.onsuccess = () => {
-            if (request.result) {
-              setWidgetOrder(request.result.value);
-            }
-          };
-        };
+        const savedOrder = await getSetting<string[]>('widgetOrder');
+        if (savedOrder) setWidgetOrder(savedOrder);
       } catch (err) {
         console.error('Failed to load widget order:', err);
       }
@@ -39,15 +30,7 @@ export function useWidgetOrder() {
   const saveOrder = async (newOrder: string[]) => {
     setWidgetOrder(newOrder);
     try {
-      const dbRequest = indexedDB.open('SynapseFlow', 1);
-      dbRequest.onsuccess = () => {
-        const db = dbRequest.result;
-        const tx = db.transaction(['settings'], 'readwrite');
-        tx.objectStore('settings').put({
-          key: 'widgetOrder',
-          value: newOrder,
-        });
-      };
+      await setSetting('widgetOrder', newOrder);
     } catch (err) {
       console.error('Failed to save widget order:', err);
     }

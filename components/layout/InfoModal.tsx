@@ -1,42 +1,51 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { CognitiveLog } from '@/types';
+import { v4 as uuidv4 } from 'uuid';
+import { addMedicationProfile, clearAllData, getSetting, setSetting } from '@/lib/store/db';
+import { CognitiveLog, MedicationProfile, UserProfile } from '@/types';
 
 interface InfoModalProps {
   isOpen: boolean;
   onClose: () => void;
   logs: CognitiveLog[];
+  medications: MedicationProfile[];
+  onMedicationSaved: (profile: MedicationProfile) => void;
 }
 
-interface UserProfile {
-  age?: number;
-  weight?: number;
-  height?: number;
-  wakeUpTime?: string;
-}
+type MedicationForm = {
+  name: string;
+  defaultDose: string;
+  onset: string;
+  peak: string;
+  halfLife: string;
+  duration: string;
+  strength: string;
+  releaseType: 'instant' | 'extended';
+};
 
-export default function InfoModal({ isOpen, onClose, logs }: InfoModalProps) {
+export default function InfoModal({ isOpen, onClose, logs, medications, onMedicationSaved }: InfoModalProps) {
   const [activeTab, setActiveTab] = useState<'info' | 'export' | 'settings'>('info');
   const [exportStatus, setExportStatus] = useState('');
   const [userProfile, setUserProfile] = useState<UserProfile>({});
   const [profileSaved, setProfileSaved] = useState(false);
+  const [medForm, setMedForm] = useState<MedicationForm>({
+    name: '',
+    defaultDose: '10',
+    onset: '20',
+    peak: '90',
+    halfLife: '3',
+    duration: '300',
+    strength: '0.85',
+    releaseType: 'instant' as const,
+  });
+  const [medSaved, setMedSaved] = useState(false);
 
   useEffect(() => {
     const loadProfile = async () => {
       try {
-        const dbRequest = indexedDB.open('SynapseFlow', 1);
-        dbRequest.onsuccess = () => {
-          const db = dbRequest.result;
-          const tx = db.transaction(['settings'], 'readonly');
-          const store = tx.objectStore('settings');
-          const request = store.get('userProfile');
-          request.onsuccess = () => {
-            if (request.result) {
-              setUserProfile(request.result.value);
-            }
-          };
-        };
+        const profile = await getSetting<UserProfile>('userProfile');
+        if (profile) setUserProfile(profile);
       } catch (err) {
         console.error('Failed to load profile:', err);
       }
@@ -99,38 +108,43 @@ ${sleepLogs.map(log => `- Kvalita: ${log.data.quality}/5, Trvání: ${log.data.d
 
   const handleSaveProfile = async () => {
     try {
-      const dbRequest = indexedDB.open('SynapseFlow', 1);
-      dbRequest.onsuccess = () => {
-        const db = dbRequest.result;
-        const tx = db.transaction(['settings'], 'readwrite');
-        tx.objectStore('settings').put({
-          key: 'userProfile',
-          value: userProfile,
-        });
-        setProfileSaved(true);
-        setTimeout(() => setProfileSaved(false), 2000);
-      };
+      await setSetting('userProfile', userProfile);
+      setProfileSaved(true);
+      setTimeout(() => setProfileSaved(false), 2000);
     } catch (err) {
       console.error('Failed to save profile:', err);
     }
   };
 
-  const handleDeleteAllData = () => {
+  const handleSaveMedication = async () => {
+    const profile: MedicationProfile = {
+      id: uuidv4(),
+      name: medForm.name.trim(),
+      defaultDose: Number(medForm.defaultDose),
+      onset: Number(medForm.onset),
+      peak: Number(medForm.peak),
+      halfLife: Number(medForm.halfLife),
+      duration: Number(medForm.duration),
+      strength: Number(medForm.strength),
+      releaseType: medForm.releaseType,
+    };
+
+    if (!profile.name || (profile.defaultDose ?? 0) <= 0 || profile.onset < 0 || profile.peak <= 0 || profile.duration <= 0 || profile.halfLife <= 0) {
+      return;
+    }
+
+    await addMedicationProfile(profile);
+    onMedicationSaved(profile);
+    setMedForm({ ...medForm, name: '' });
+    setMedSaved(true);
+    setTimeout(() => setMedSaved(false), 2000);
+  };
+
+  const handleDeleteAllData = async () => {
     if (confirm('Opravdu chceš smazat VŠECHNA data? Tuto akci nelze vrátit.')) {
-      (async () => {
-        const dbRequest = indexedDB.open('SynapseFlow', 1);
-        dbRequest.onsuccess = () => {
-          const db = dbRequest.result;
-          const tx = db.transaction(['cognitive_logs', 'medication_profiles', 'settings'], 'readwrite');
-          tx.objectStore('cognitive_logs').clear();
-          tx.objectStore('medication_profiles').clear();
-          tx.objectStore('settings').clear();
-          tx.oncomplete = () => {
-            alert('Všechna data byla smazána');
-            window.location.reload();
-          };
-        };
-      })();
+      await clearAllData();
+      alert('Všechna data byla smazána');
+      window.location.reload();
     }
   };
 
@@ -308,6 +322,72 @@ ${sleepLogs.map(log => `- Kvalita: ${log.data.quality}/5, Trvání: ${log.data.d
                   💾 Uložit profil
                 </button>
                 {profileSaved && <p className="text-xs text-accent-cyan">✓ Profil uložen</p>}
+              </div>
+
+              <div className="space-y-4 border-b border-card-border/30 pb-4">
+                <h4 className="font-medium text-sm">Medikace</h4>
+                <div className="bg-card-border/10 p-3 rounded-lg">
+                  <p className="text-xs font-medium mb-2">Uložené profily</p>
+                  <ul className="text-xs text-muted space-y-1">
+                    {medications.map((medication) => (
+                      <li key={medication.id}>
+                        {medication.name} · {medication.defaultDose ?? '-'}mg · peak {medication.peak}m · half-life {medication.halfLife}h
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="col-span-2">
+                    <label className="text-xs font-medium text-muted block mb-2">Název</label>
+                    <input
+                      value={medForm.name}
+                      onChange={(e) => setMedForm({ ...medForm, name: e.target.value })}
+                      className="input-base text-sm"
+                      placeholder="např. Medikinet IR"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted block mb-2">Výchozí dávka mg</label>
+                    <input type="number" min="0.1" step="0.1" value={medForm.defaultDose} onChange={(e) => setMedForm({ ...medForm, defaultDose: e.target.value })} className="input-base text-sm" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted block mb-2">Release</label>
+                    <select value={medForm.releaseType} onChange={(e) => setMedForm({ ...medForm, releaseType: e.target.value as 'instant' | 'extended' })} className="input-base text-sm">
+                      <option value="instant">Instant</option>
+                      <option value="extended">Extended</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted block mb-2">Onset min</label>
+                    <input type="number" min="0" value={medForm.onset} onChange={(e) => setMedForm({ ...medForm, onset: e.target.value })} className="input-base text-sm" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted block mb-2">Peak min</label>
+                    <input type="number" min="1" value={medForm.peak} onChange={(e) => setMedForm({ ...medForm, peak: e.target.value })} className="input-base text-sm" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted block mb-2">Half-life h</label>
+                    <input type="number" min="0.1" step="0.1" value={medForm.halfLife} onChange={(e) => setMedForm({ ...medForm, halfLife: e.target.value })} className="input-base text-sm" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted block mb-2">Duration min</label>
+                    <input type="number" min="1" value={medForm.duration} onChange={(e) => setMedForm({ ...medForm, duration: e.target.value })} className="input-base text-sm" />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="text-xs font-medium text-muted block mb-2">Síla efektu</label>
+                    <input type="number" min="0.1" max="2" step="0.05" value={medForm.strength} onChange={(e) => setMedForm({ ...medForm, strength: e.target.value })} className="input-base text-sm" />
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleSaveMedication}
+                  disabled={!medForm.name.trim()}
+                  className="w-full px-4 py-2 rounded-lg bg-accent-cyan/20 text-accent-cyan hover:bg-accent-cyan/30 disabled:opacity-50 transition text-sm font-medium"
+                >
+                  Přidat medikaci
+                </button>
+                {medSaved && <p className="text-xs text-accent-cyan">✓ Medikace uložena</p>}
               </div>
 
               <div className="space-y-3">
