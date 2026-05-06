@@ -25,19 +25,18 @@ export function generateTimelineData(startTime: number, endTime: number, doses: 
         const onsetEnd = profile.onset;
         const peakTime = profile.peak;
 
+        const doseMultiplier = 0.03;
+
         if (elapsedMinutes < onsetEnd) {
-          // Fáze absorpce
-          totalConcentration += (elapsedMinutes / onsetEnd) * dose.dose * 0.01;
+          totalConcentration += (elapsedMinutes / onsetEnd) * dose.dose * doseMultiplier;
         } else if (elapsedMinutes <= peakTime) {
-          // Fáze stoupání ke špičce
           const rise = (elapsedMinutes - onsetEnd) / (peakTime - onsetEnd);
-          totalConcentration += dose.dose * 0.01 * (0.7 + rise * 0.3);
+          totalConcentration += dose.dose * doseMultiplier * (0.7 + rise * 0.3);
         } else {
-          // Fáze poklesu (exponenciální rozpad)
           const timeSincePeak = elapsedMinutes - peakTime;
           const halfLife = profile.halfLife * 60;
           const decayRate = Math.LN2 / halfLife;
-          totalConcentration += dose.dose * 0.01 * Math.exp(-decayRate * timeSincePeak);
+          totalConcentration += dose.dose * doseMultiplier * Math.exp(-decayRate * timeSincePeak);
         }
       }
     }
