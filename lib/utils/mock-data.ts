@@ -49,7 +49,10 @@ export function generateTimelineData(startTime: number, endTime: number, doses: 
     });
 
     const focus = Math.round(estimateFocusFromConcentration(totalConcentration, 50));
-    const idealFocus = Math.max(0, Math.min(1, (75 - Math.abs(50 - focus) * 0.3) / 100));
+    const optimalPeak = 0.75;
+    const gaussianWidth = 0.15;
+    const deviation = Math.abs(totalConcentration - optimalPeak) / gaussianWidth;
+    const idealFocus = Math.exp(-0.5 * deviation * deviation);
 
     points.push({
       time: timeStr,
