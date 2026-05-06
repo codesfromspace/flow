@@ -52,18 +52,16 @@ export function generateTimelineData(startTime: number, endTime: number, doses: 
 
     const optimalPeak = 0.75;
     const gaussianWidth = 0.15;
-    const deviation = Math.abs(totalConcentration - optimalPeak) / gaussianWidth;
-    const idealFocus = Math.exp(-0.5 * deviation * deviation);
 
-    const targetZoneDeviation = Math.abs(0.5 - optimalPeak) / gaussianWidth;
-    const targetZoneBase = Math.exp(-0.5 * targetZoneDeviation * targetZoneDeviation) * 0.6;
+    const deviation = Math.abs(totalConcentration - optimalPeak) / gaussianWidth;
+    const actualCurve = Math.exp(-0.5 * deviation * deviation);
 
     points.push({
       time: timeStr,
       timestamp: time,
       concentration: Math.min(totalConcentration, 1),
       focus: Math.max(0, Math.min(100, focus)),
-      optimalFocus: Math.max(idealFocus, targetZoneBase),
+      optimalFocus: Math.max(actualCurve, 0.75),
     });
   }
 
