@@ -215,7 +215,7 @@ export default function Dashboard() {
     switch (widgetId) {
       case 'cognitive-state':
         return (
-          <DraggableWidget key={widgetId} id={widgetId} {...wrapperProps}>
+          <DraggableWidget key={widgetId} id={widgetId} size="wide" {...wrapperProps}>
             <CurrentCognitiveState focusLevel={focusLevel} overstimulated={focusLevel > 85} activeMedications={activeMeds} />
           </DraggableWidget>
         );
@@ -251,7 +251,7 @@ export default function Dashboard() {
         );
       case 'activation-curve':
         return (
-          <DraggableWidget key={widgetId} id={widgetId} {...wrapperProps}>
+          <DraggableWidget key={widgetId} id={widgetId} size="full" {...wrapperProps}>
             {timelineData.length > 0 ? (
               <ActivationCurve data={timelineData} medications={medications.map((m) => ({ name: m.name, color: '#22d3ee', doseTime: 0 }))} currentTime={currentTime} />
             ) : null}
@@ -259,7 +259,7 @@ export default function Dashboard() {
         );
       case 'daily-timeline':
         return (
-          <DraggableWidget key={widgetId} id={widgetId} {...wrapperProps}>
+          <DraggableWidget key={widgetId} id={widgetId} size="full" {...wrapperProps}>
             {todayEvents.length > 0 ? <DailyTimeline events={todayEvents} currentTime={currentTime} dayStart={dayStart} dayEnd={dayEnd} /> : null}
           </DraggableWidget>
         );
@@ -280,7 +280,7 @@ export default function Dashboard() {
 
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleWidgetDragEnd}>
           <SortableContext items={widgetOrder} strategy={rectSortingStrategy}>
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 auto-rows-max">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 auto-rows-[minmax(220px,auto)] items-stretch">
               {widgetOrder.slice(0, 6).map((widgetId, idx) => renderWidget(widgetId, idx))}
             </div>
 

@@ -59,7 +59,7 @@ export default function SleepPressure({ pressure, hoursAwake }: SleepPressurePro
   const rec = getRecommendation();
 
   return (
-    <div className={`card-base p-4 space-y-3 bg-gradient-to-br ${getStatusColor()}`}>
+    <div className={`card-base h-full min-h-[220px] p-4 bg-gradient-to-br ${getStatusColor()} flex flex-col justify-between gap-3`}>
       <p className="text-label">Sleep Pressure</p>
       <div className="space-y-2">
         <div className="flex items-baseline gap-2">

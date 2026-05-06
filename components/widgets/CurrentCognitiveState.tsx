@@ -48,46 +48,46 @@ export default function CurrentCognitiveState({
       return {
         title: '⚠️ Přestimulace',
         message: 'Mozek je v hyperaktivním stavu. Může být obtížné zpomalit myšlení.',
-        tips: ['Zpomal tempo práce', 'Zkus meditaci nebo cvičení', 'Vyhni se dalším stimulantům', 'Voda a zdravé jídlo'],
+        tip: 'Zpomal tempo, voda, bez dalších stimulantů.',
       };
     }
     if (focusLevel >= 80) {
       return {
         title: '✅ Optimální fokus',
         message: 'Tvůj mozek je v ideálním stavu pro soustředěnou práci.',
-        tips: ['Využij tuto dobu na důležité úkoly', 'Pracuj na projektech vyžadujících kreativitu', 'Záznamy mohou být hlubší a kvalitější'],
+        tip: 'Využij okno na nejtěžší práci.',
       };
     }
     if (focusLevel >= 60) {
       return {
         title: '🎯 Dobrý fokus',
         message: 'Dostatečná soustředěnost pro efektivní práci.',
-        tips: ['Vhodné pro běžné úkoly', 'Zvažuj těžší úkoly postupně', 'Sleduj, jak se cítíš'],
+        tip: 'Dobré pro běžné úkoly a postupný rozjezd.',
       };
     }
     if (focusLevel >= 40) {
       return {
         title: '⚡ Středně slabý fokus',
         message: 'Soustředěnost je pouze střední. Zkus si pomoct.',
-        tips: ['Krátký spánek nebo kofein', 'Rozdělení úkolů na menší kusy', 'Pohyb a čerstvý vzduch'],
+        tip: 'Rozděl práci na menší kroky, zvaž pauzu.',
       };
     }
     return {
       title: '📍 Nízký fokus',
       message: 'Soustředěnost je nízká. Tvůj mozek není připraven na těžkou práci.',
-      tips: ['Odpočinek nebo spánek', 'Jídlo s proteiny a zdravými tuky', 'Fyzická aktivita (procházka)', 'Zvažuj konzultaci lékaře'],
+      tip: 'Odpočinek, jídlo a lehký pohyb budou lepší než tlak na výkon.',
     };
   };
 
   const rec = getRecommendation();
 
   return (
-    <div className={`card-elevated col-span-full lg:col-span-2 p-6 lg:p-8 bg-gradient-to-br ${getBgColor()} animate-fade-in space-y-4`}>
+    <div className={`card-elevated h-full min-h-[220px] p-5 bg-gradient-to-br ${getBgColor()} animate-fade-in flex flex-col justify-between gap-4`}>
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1">
           <p className="text-label mb-2">Current State</p>
-          <h2 className={`text-display font-light mb-2 ${getStateColor()}`}>{focusLevel}%</h2>
-          <p className="text-title text-foreground/80 mb-4">{getStateLabel()}</p>
+          <h2 className={`text-5xl font-light mb-2 ${getStateColor()}`}>{focusLevel}%</h2>
+          <p className="text-lg text-foreground/80 mb-4">{getStateLabel()}</p>
 
           {activeMedications.length > 0 && (
             <div className="pt-4 border-t border-card-border/30">
@@ -121,20 +121,7 @@ export default function CurrentCognitiveState({
       <div className="bg-card-border/10 p-3 rounded-lg space-y-2 border border-card-border/20">
         <p className="text-sm font-medium text-foreground">{rec.title}</p>
         <p className="text-xs text-muted leading-relaxed">{rec.message}</p>
-        <ul className="text-xs text-muted space-y-1">
-          {rec.tips.map((tip, i) => (
-            <li key={i} className="flex gap-2">
-              <span>•</span>
-              <span>{tip}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <div className="border-t border-card-border/20 pt-3">
-        <p className="text-xs text-muted">
-          <strong>ℹ️ Co to je:</strong> Focus level je odhadnut z farmakokinetikou a vytvořené inverzní U-křivky. Optimum je kolem 75% - více není vždy lépe (přestimulace).
-        </p>
+        <p className="text-xs text-muted leading-relaxed">{rec.tip}</p>
       </div>
     </div>
   );

@@ -40,7 +40,7 @@ export default function EstimatedFocus({ percentage, trend }: EstimatedFocusProp
   };
 
   return (
-    <div className="card-base p-4 space-y-3">
+    <div className="card-base h-full min-h-[220px] p-4 flex flex-col justify-between">
       <div className="flex items-center justify-between">
         <p className="text-label">Focus Quality</p>
         <span className={`text-lg font-medium ${getTrendColor()}`} title={`Trend: ${trend}`}>{getTrendIcon()}</span>

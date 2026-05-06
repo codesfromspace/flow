@@ -7,6 +7,7 @@ import { CSS } from '@dnd-kit/utilities';
 interface DraggableWidgetProps {
   id: string;
   children: ReactNode;
+  size?: 'small' | 'wide' | 'full';
   onMoveUp?: () => void;
   onMoveDown?: () => void;
   canMoveUp?: boolean;
@@ -16,6 +17,7 @@ interface DraggableWidgetProps {
 export default function DraggableWidget({
   id,
   children,
+  size = 'small',
   onMoveUp,
   onMoveDown,
   canMoveUp = true,
@@ -29,12 +31,17 @@ export default function DraggableWidget({
     zIndex: isDragging ? 30 : undefined,
     opacity: isDragging ? 0.75 : 1,
   };
+  const sizeClass = {
+    small: 'min-h-[220px]',
+    wide: 'lg:col-span-2 min-h-[220px]',
+    full: 'lg:col-span-full',
+  }[size];
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className="relative group"
+      className={`relative group h-full ${sizeClass}`}
       onMouseEnter={() => setShowControls(true)}
       onMouseLeave={() => setShowControls(false)}
     >

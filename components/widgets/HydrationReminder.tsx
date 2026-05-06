@@ -65,7 +65,7 @@ export default function HydrationReminder({ level, concentration }: HydrationRem
   const rec = getRecommendation();
 
   return (
-    <div className={`card-base p-4 space-y-3 ${isUrgent ? 'border border-status-danger/40 bg-status-danger/5' : ''}`}>
+    <div className={`card-base h-full min-h-[220px] p-4 flex flex-col justify-between gap-3 ${isUrgent ? 'border border-status-danger/40 bg-status-danger/5' : ''}`}>
       <div>
         <p className="text-label mb-2">Hydration Status</p>
         <div className="flex items-center gap-2">

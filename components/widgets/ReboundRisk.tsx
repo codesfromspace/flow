@@ -39,25 +39,25 @@ export default function ReboundRisk({ level, timeToRebound }: ReboundRiskProps) 
         return {
           title: '✅ Bez rizika',
           message: 'Medicína není aktivní. Žádný rebound efekt.',
-          tips: ['Ideální čas na zahájení nové dávky', 'Stabilní mood a soustředění'],
+          tip: 'Stabilní mood a soustředění.',
         };
       case 'low':
         return {
           title: '🟢 Nízké riziko',
           message: 'Efekt se pomalu stírá. Rebound bude mírný.',
-          tips: ['Hydratuj se', 'Vyhni se dalším stimulantům', 'Zvažuj proteinový snack'],
+          tip: 'Hydratace a lehký snack stačí.',
         };
       case 'medium':
         return {
           title: '🟡 Střední riziko',
           message: 'Významný pokles dopaminu se blíží. Buď připravený.',
-          tips: ['Oznámení na pozadí', 'Plánuj lehčí úkoly na později', 'Voda, spánek, pohyb', 'Vyhni se dalším stimulantům'],
+          tip: 'Plánuj lehčí úkoly, voda a pauza.',
         };
       case 'high':
         return {
           title: '🔴 Vysoké riziko',
           message: 'Rebound je NYNÍ nebo začal. Očekávej pokles energie.',
-          tips: ['Pauza a relaxace (medatce/Walk)', '15-30 min spánku nebo lehu', 'Voda a potravina s proteiny', 'Bez dalších stimulantů', 'Empatický postoj k sobě - je to normální'],
+          tip: 'Pauza, voda, protein, bez dalších stimulantů.',
         };
     }
   };
@@ -65,7 +65,7 @@ export default function ReboundRisk({ level, timeToRebound }: ReboundRiskProps) 
   const rec = getRecommendation();
 
   return (
-    <div className={`card-base p-4 space-y-3 border bg-gradient-to-br ${getRiskColor()}`}>
+    <div className={`card-base h-full min-h-[220px] p-4 border bg-gradient-to-br ${getRiskColor()} flex flex-col justify-between gap-3`}>
       <p className="text-label">Rebound Risk</p>
       <p className={`text-headline font-light ${getRiskTextColor()}`}>{getRiskLabel()}</p>
       {timeToRebound && (
@@ -75,20 +75,7 @@ export default function ReboundRisk({ level, timeToRebound }: ReboundRiskProps) 
       <div className="bg-card-border/10 p-2 rounded space-y-2 border border-card-border/20">
         <p className="text-xs font-medium">{rec.title}</p>
         <p className="text-xs text-muted leading-relaxed">{rec.message}</p>
-        <ul className="text-xs text-muted space-y-1">
-          {rec.tips.map((tip, i) => (
-            <li key={i} className="flex gap-2">
-              <span>•</span>
-              <span>{tip}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <div className="border-t border-card-border/20 pt-2">
-        <p className="text-xs text-muted">
-          <strong>ℹ️ Co to je:</strong> Rebound je pokles dopaminu POD baseline po odeznění léku. Psychicky: únava, deprese, nedostatek motivace. Je to normální a přejde.
-        </p>
+        <p className="text-xs text-muted leading-relaxed">{rec.tip}</p>
       </div>
     </div>
   );

@@ -40,7 +40,7 @@ export default function MentalLoad({ load, capacity }: MentalLoadProps) {
   const rec = getRecommendation();
 
   return (
-    <div className="card-base p-4 space-y-3">
+    <div className="card-base h-full min-h-[220px] p-4 flex flex-col justify-between gap-3">
       <p className="text-label">Mental Load</p>
       <div className="space-y-3">
         <div className="flex items-center justify-between">
