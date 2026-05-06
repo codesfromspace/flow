@@ -9,6 +9,7 @@ import ReboundRisk from '@/components/widgets/ReboundRisk';
 import SleepPressure from '@/components/widgets/SleepPressure';
 import MentalLoad from '@/components/widgets/MentalLoad';
 import HydrationReminder from '@/components/widgets/HydrationReminder';
+import PharmacologyInfo from '@/components/widgets/PharmacologyInfo';
 import ActivationCurve from '@/components/charts/ActivationCurve';
 import DailyTimeline from '@/components/charts/DailyTimeline';
 import QuickLogForm from '@/components/core/QuickLogForm';
@@ -186,19 +187,27 @@ export default function Dashboard() {
           <HydrationReminder level={hydrationLevel} concentration={focusLevel / 100} />
         </div>
 
-        <div className="grid grid-cols-1 gap-6">
-          {timelineData.length > 0 && (
-            <ActivationCurve
-              data={timelineData}
-              medications={medications.map((m) => ({
-                name: m.name,
-                color: '#22d3ee',
-                doseTime: 0,
-              }))}
-              currentTime={currentTime}
-            />
-          )}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
+            {timelineData.length > 0 && (
+              <ActivationCurve
+                data={timelineData}
+                medications={medications.map((m) => ({
+                  name: m.name,
+                  color: '#22d3ee',
+                  doseTime: 0,
+                }))}
+                currentTime={currentTime}
+              />
+            )}
+          </div>
 
+          <div className="lg:col-span-1">
+            <PharmacologyInfo />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-6">
           {todayEvents.length > 0 && (
             <DailyTimeline
               events={todayEvents}

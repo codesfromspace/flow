@@ -45,7 +45,7 @@ export function generateTimelineData(startTime: number, endTime: number, doses: 
     const timeStr = new Date(time).toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
-      hour12: true,
+      hour12: false,
     });
 
     const focus = Math.round(estimateFocusFromConcentration(totalConcentration, 50));

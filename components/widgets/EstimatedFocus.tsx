@@ -22,11 +22,28 @@ export default function EstimatedFocus({ percentage, trend }: EstimatedFocusProp
     }
   };
 
+  const getStatusLabel = () => {
+    if (percentage >= 80) return 'Excellent focus';
+    if (percentage >= 60) return 'Good focus';
+    if (percentage >= 40) return 'Moderate focus';
+    return 'Low focus';
+  };
+
+  const getTipBasedOnTrend = () => {
+    if (trend === 'up') {
+      return 'Tvůj fokus se zlepšuje. Pokračuj v tom, co děláš!';
+    }
+    if (trend === 'down') {
+      return 'Tvůj fokus se zhoršuje. Zvažuj přestávku, vodu, nebo fyzickou aktivitu.';
+    }
+    return 'Tvůj fokus je stabilní. Dobrá pozice pro kontinuální práci.';
+  };
+
   return (
     <div className="card-base p-4 space-y-3">
       <div className="flex items-center justify-between">
         <p className="text-label">Focus Quality</p>
-        <span className={`text-lg font-medium ${getTrendColor()}`}>{getTrendIcon()}</span>
+        <span className={`text-lg font-medium ${getTrendColor()}`} title={`Trend: ${trend}`}>{getTrendIcon()}</span>
       </div>
       <div className="space-y-2">
         <div className="flex items-end gap-2">
@@ -36,9 +53,17 @@ export default function EstimatedFocus({ percentage, trend }: EstimatedFocusProp
           <div className="h-full bg-gradient-to-r from-accent-cyan to-accent-slate transition-all duration-500" style={{ width: `${percentage}%` }} />
         </div>
       </div>
-      <p className="text-xs text-muted">
-        {percentage >= 80 ? 'Excellent focus' : percentage >= 60 ? 'Good focus' : percentage >= 40 ? 'Moderate focus' : 'Low focus'}
-      </p>
+
+      <div className="bg-card-border/10 p-2 rounded space-y-2 border border-card-border/20">
+        <p className="text-xs font-medium">{getStatusLabel()}</p>
+        <p className="text-xs text-muted leading-relaxed">{getTipBasedOnTrend()}</p>
+      </div>
+
+      <div className="border-t border-card-border/20 pt-2">
+        <p className="text-xs text-muted">
+          <strong>ℹ️ Co to je:</strong> Kvalita fokus je kombinace farmakologických efektů a spánkového tlaku. Ideální je 70-85% - vyšší už není výhodné.
+        </p>
+      </div>
     </div>
   );
 }
