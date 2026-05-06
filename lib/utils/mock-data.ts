@@ -4,6 +4,35 @@ import { MEDICATION_PRESETS, estimateFocusFromConcentration } from './cognitive-
 export function generateMockData(daysBack: number = 7) {
   const logs: any[] = [];
   const medications = Object.values(MEDICATION_PRESETS);
+
+  const now = new Date();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const doses = [
+    { time: 8, med: 'methylphenidate-ir', dose: 20 },
+    { time: 12, med: 'methylphenidate-ir', dose: 20 },
+    { time: 16, med: 'caffeine', dose: 200 },
+  ];
+
+  doses.forEach(({ time, med, dose }) => {
+    const doseTime = new Date(today);
+    doseTime.setHours(time, 0, 0, 0);
+
+    if (doseTime <= now) {
+      logs.push({
+        id: `dose-${time}`,
+        timestamp: doseTime,
+        logType: 'medication',
+        data: {
+          medicationId: med,
+          medicationName: MEDICATION_PRESETS[med]?.name || med,
+          dose: dose,
+        },
+      });
+    }
+  });
+
   return { logs, medications };
 }
 
