@@ -140,7 +140,7 @@ export default function ActivationCurve({ data, medications, currentTime }: Acti
             fill="url(#colorConcentration)"
             isAnimationActive={true}
             animationDuration={500}
-            name="Actual"
+            name="Actual concentration"
           />
 
           <Area
@@ -151,7 +151,7 @@ export default function ActivationCurve({ data, medications, currentTime }: Acti
             strokeDasharray="5 5"
             fill="none"
             isAnimationActive={false}
-            name="Ideal"
+            name="Target zone (optimal)"
             opacity={0.6}
           />
         </AreaChart>
@@ -181,20 +181,18 @@ export default function ActivationCurve({ data, medications, currentTime }: Acti
         </div>
       </div>
 
-      <div className="bg-card-border/10 rounded-lg p-3 space-y-2">
-        <div className="grid grid-cols-3 gap-3 text-xs">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-sm bg-accent-green/50" />
-            <span className="text-muted">Onset phase</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-sm bg-accent-cyan/50" />
-            <span className="text-muted">Peak duration</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-sm bg-accent-amber/50" />
-            <span className="text-muted">Decline phase</span>
-          </div>
+      <div className="bg-card-border/10 rounded-lg p-3 space-y-3">
+        <div>
+          <p className="text-xs font-medium mb-2">Křivky vysvětleny:</p>
+          <ul className="text-xs text-muted space-y-1">
+            <li><strong>Modrá křivka (Actual)</strong> = Skutečná farmakokinetika tvé medicíny. Absorbce → Peak → Pokles. Odvislá na čase, dávce a tvém těle.</li>
+            <li><strong>Šedá přerušovaná (Target)</strong> = Ideální zóna pro maximální fokus. Ukazuje, kde by měla být koncentrace pro nejlepší výkon.</li>
+          </ul>
+        </div>
+        <div className="border-t border-card-border/20 pt-2">
+          <p className="text-xs text-muted">
+            <strong>💡 Tipy:</strong> Pokud je Actual daleko pod Target, je málo efektu. Pokud je výrazně nad, hrozí přestimulace (úzkost, třes).
+          </p>
         </div>
       </div>
     </div>
