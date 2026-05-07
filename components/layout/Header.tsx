@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import FlowLogo from './FlowLogo';
 
 interface HeaderProps {
   onOpenInfo?: () => void;
@@ -36,18 +37,15 @@ export default function Header({ onOpenInfo }: HeaderProps) {
   }, []);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-card-border/30 bg-background/80 backdrop-blur-md">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+    <header className="sticky top-0 z-40 border-b border-card-border/80 bg-white/78 backdrop-blur-xl">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex flex-col gap-0.5">
-              <h1 className="text-title font-medium tracking-tight text-accent-cyan">
-                Flow
-              </h1>
-              <p className="text-label text-muted">{currentDate}</p>
-            </div>
+          <div className="flex items-center gap-5">
+            <FlowLogo />
+            <div className="hidden h-8 w-px bg-card-border sm:block" />
+            <p className="hidden text-sm font-medium text-muted sm:block">{currentDate}</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             {onOpenInfo ? (
               <button
                 type="button"
@@ -58,10 +56,10 @@ export default function Header({ onOpenInfo }: HeaderProps) {
               </button>
             ) : null}
             <div className="text-right">
-              <div className="text-headline font-light">{currentTime}</div>
-              <div className="text-label text-muted">your cognitive state</div>
+              <div className="text-lg font-semibold tabular-nums text-foreground">{currentTime}</div>
+              <div className="text-xs font-medium text-muted">local state</div>
             </div>
-            <div className="w-2 h-2 rounded-full bg-status-green animate-pulse-soft" />
+            <div className="h-2.5 w-2.5 rounded-full bg-[var(--accent-green)] shadow-[0_0_0_4px_rgb(47_155_114/0.12)]" />
           </div>
         </div>
       </div>

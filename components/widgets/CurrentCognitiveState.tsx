@@ -1,7 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-
 interface CurrentCognitiveStateProps {
   focusLevel: number;
   overstimulated: boolean;
@@ -13,14 +11,6 @@ export default function CurrentCognitiveState({
   overstimulated,
   activeMedications,
 }: CurrentCognitiveStateProps) {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) return null;
-
   const getStateLabel = () => {
     if (overstimulated) return 'Overstimulated';
     if (focusLevel >= 80) return 'Optimal Focus';

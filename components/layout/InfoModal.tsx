@@ -217,7 +217,7 @@ ${sleepLogs.map(log => `- Kvalita: ${log.data.quality}/5, Trvání: ${log.data.d
                   : 'bg-card-border/20 text-muted hover:bg-card-border/30'
               }`}
             >
-              {tab === 'info' ? 'ℹ️ Info' : tab === 'export' ? '📤 Export' : '⚙️ Nastavení'}
+              {tab === 'info' ? 'Info' : tab === 'export' ? 'Export' : 'Nastavení'}
             </button>
           ))}
         </div>
@@ -234,7 +234,7 @@ ${sleepLogs.map(log => `- Kvalita: ${log.data.quality}/5, Trvání: ${log.data.d
               </div>
 
               <div className="space-y-3">
-                <h4 className="font-medium">📋 Psychostimulanty a jejich účinky</h4>
+                <h4 className="font-medium">Psychostimulanty a jejich účinky</h4>
                 <ul className="text-sm text-muted space-y-2">
                   <li>• <strong>Methylphenidat (Ritalín):</strong> Onset 15-20 min, peak 1-2h, HV 3-4h</li>
                   <li>• <strong>Amphetamin:</strong> Onset 20-30 min, peak 2-3h, HV 10-12h</li>
@@ -243,7 +243,7 @@ ${sleepLogs.map(log => `- Kvalita: ${log.data.quality}/5, Trvání: ${log.data.d
               </div>
 
               <div className="space-y-3">
-                <h4 className="font-medium">💧 Hydratace a psychostimulanty</h4>
+                <h4 className="font-medium">Hydratace a psychostimulanty</h4>
                 <ul className="text-sm text-muted space-y-2">
                   <li>• Psychostimulanty potlačují pocit žízně</li>
                   <li>• Zvyšují ztrátu tekutin (zvýšený metabolismus)</li>
@@ -253,7 +253,7 @@ ${sleepLogs.map(log => `- Kvalita: ${log.data.quality}/5, Trvání: ${log.data.d
               </div>
 
               <div className="space-y-3">
-                <h4 className="font-medium">😴 Spánek a medicína</h4>
+                <h4 className="font-medium">Spánek a medicína</h4>
                 <ul className="text-sm text-muted space-y-2">
                   <li>• Psychostimulanty mohou interferovat se spánkem</li>
                   <li>• Ideálně posledí dávka 6-8 hodin před spánkem</li>
@@ -263,7 +263,7 @@ ${sleepLogs.map(log => `- Kvalita: ${log.data.quality}/5, Trvání: ${log.data.d
               </div>
 
               <div className="space-y-3">
-                <h4 className="font-medium">⚠️ Rebound Effect</h4>
+                <h4 className="font-medium">Rebound Effect</h4>
                 <ul className="text-sm text-muted space-y-2">
                   <li>• Pokles soustředění po odeznění efektu medicíny</li>
                   <li>• Obvykle se projevuje 4-8 hodin po dávce</li>
@@ -294,7 +294,7 @@ ${sleepLogs.map(log => `- Kvalita: ${log.data.quality}/5, Trvání: ${log.data.d
                 onClick={handleExport}
                 className="w-full btn-primary"
               >
-                📤 Exportovat do Markdown
+                Exportovat do Markdown
               </button>
 
               {exportStatus && (
@@ -362,7 +362,7 @@ ${sleepLogs.map(log => `- Kvalita: ${log.data.quality}/5, Trvání: ${log.data.d
                   onClick={handleSaveProfile}
                   className="w-full px-4 py-2 rounded-lg bg-accent-cyan/20 text-accent-cyan hover:bg-accent-cyan/30 transition text-sm font-medium"
                 >
-                  💾 Uložit profil
+                  Uložit profil
                 </button>
                 {profileSaved && <p className="text-xs text-accent-cyan">✓ Profil uložen</p>}
               </div>
@@ -497,7 +497,7 @@ ${sleepLogs.map(log => `- Kvalita: ${log.data.quality}/5, Trvání: ${log.data.d
                   onClick={handleDeleteAllData}
                   className="w-full px-4 py-2 rounded-lg bg-status-danger/20 text-status-danger hover:bg-status-danger/30 transition text-sm font-medium"
                 >
-                  🗑️ Smazat všechna data
+                  Smazat všechna data
                 </button>
                 <p className="text-xs text-muted">
                   Pozor: Tuto akci nelze vrátit. Budou smazána všechna data ze aplikace.

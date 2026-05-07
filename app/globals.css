@@ -1,21 +1,26 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-  --card-bg: #f8f8f8;
-  --card-border: #e5e7eb;
-  --muted: #6b7280;
+  --background: #f5f7f8;
+  --foreground: #142123;
+  --card-bg: #ffffff;
+  --card-border: #dce5e4;
+  --muted: #647776;
+  --accent-cyan: #0e9fa8;
+  --accent-green: #2f9b72;
+  --accent-amber: #c57a24;
+  --accent-red: #c2413f;
+  --shadow-soft: 0 18px 48px rgb(18 33 35 / 0.08);
   color-scheme: light;
 }
 
 html.dark {
-  --background: #0f172a;
-  --foreground: #f8fafc;
-  --card-bg: #1e293b;
-  --card-border: #334155;
-  --muted: #94a3b8;
-  color-scheme: dark;
+  --background: #f5f7f8;
+  --foreground: #142123;
+  --card-bg: #ffffff;
+  --card-border: #dce5e4;
+  --muted: #647776;
+  color-scheme: light;
 }
 
 @theme inline {
@@ -33,7 +38,10 @@ html {
 }
 
 body {
-  background: var(--background);
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 0.85), rgb(245 247 248 / 0.92) 34rem),
+    radial-gradient(circle at 15% 0%, rgb(14 159 168 / 0.09), transparent 28rem),
+    var(--background);
   color: var(--foreground);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   transition: background-color 0.3s ease, color 0.3s ease;
@@ -41,35 +49,36 @@ body {
 
 /* Card and component styles */
 .card-base {
-  border-radius: 0.5rem;
+  border-radius: 0.875rem;
   background-color: var(--card-bg);
   border-width: 1px;
-  border-color: color-mix(in srgb, var(--card-border) 20%, transparent);
+  border-color: color-mix(in srgb, var(--card-border) 88%, transparent);
+  box-shadow: 0 1px 2px rgb(20 33 35 / 0.04);
   transition-property: all;
   transition-duration: 200ms;
 }
 
 .card-interactive {
-  border-radius: 0.5rem;
+  border-radius: 0.875rem;
   background-color: var(--card-bg);
   border-width: 1px;
-  border-color: color-mix(in srgb, var(--card-border) 20%, transparent);
+  border-color: color-mix(in srgb, var(--card-border) 88%, transparent);
   transition-property: all;
   transition-duration: 200ms;
   cursor: pointer;
 }
 
 .card-interactive:hover {
-  border-color: color-mix(in srgb, var(--card-border) 40%, transparent);
-  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  border-color: color-mix(in srgb, var(--accent-cyan) 30%, var(--card-border));
+  box-shadow: var(--shadow-soft);
 }
 
 .card-elevated {
-  border-radius: 0.5rem;
+  border-radius: 1rem;
   background-color: var(--card-bg);
   border-width: 1px;
   border-color: var(--card-border);
-  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  box-shadow: var(--shadow-soft);
   backdrop-filter: blur(1px);
 }
 
@@ -77,23 +86,24 @@ body {
 .text-label {
   font-size: 0.875rem;
   line-height: 1.25rem;
-  font-weight: 500;
+  font-weight: 600;
+  letter-spacing: 0.01em;
   color: var(--muted);
 }
 
 .btn-primary {
   padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
-  background-color: #22d3ee;
-  color: var(--foreground);
-  font-weight: 500;
+  border-radius: 0.75rem;
+  background-color: var(--foreground);
+  color: #ffffff;
+  font-weight: 650;
   transition-property: all;
   cursor: pointer;
   border: none;
 }
 
 .btn-primary:hover {
-  background-color: #06b6d4;
+  background-color: #203234;
 }
 
 .btn-primary:active {
@@ -107,21 +117,22 @@ body {
 
 .btn-secondary {
   padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
-  background-color: color-mix(in srgb, var(--card-border) 30%, transparent);
+  border-radius: 0.75rem;
+  background-color: #ffffff;
   color: var(--foreground);
-  font-weight: 500;
+  font-weight: 650;
+  border: 1px solid var(--card-border);
   transition-property: all;
 }
 
 .btn-secondary:hover {
-  background-color: color-mix(in srgb, var(--card-border) 50%, transparent);
+  background-color: #eef5f4;
 }
 
 .input-base {
   width: 100%;
   padding: 0.5rem 0.75rem;
-  border-radius: 0.5rem;
+  border-radius: 0.75rem;
   background-color: var(--card-bg);
   border-width: 1px;
   border-color: color-mix(in srgb, var(--card-border) 50%, transparent);
@@ -135,8 +146,8 @@ body {
 
 .input-base:focus {
   outline: none;
-  border-color: #22d3ee;
-  box-shadow: 0 0 0 1px #22d3ee;
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 0 3px rgb(14 159 168 / 0.12);
 }
 
 /* Status indicators */

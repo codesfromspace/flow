@@ -43,12 +43,13 @@ export default function QuickLogForm({ onLog, medications }: QuickLogFormProps) 
   // Focus form state
   const [focusLevel, setFocusLevel] = useState<Rating>(3);
   const [clarity, setClarity] = useState<Rating>(3);
+  const selectedMedicationId = selectedMed || medications[0]?.id || '';
 
   const handleLogDose = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    const med = medications.find((m) => m.id === selectedMed);
+    const med = medications.find((m) => m.id === selectedMedicationId);
     const parsedDose = Number(dose);
     const takenAt = getTakenAt();
 
@@ -62,7 +63,7 @@ export default function QuickLogForm({ onLog, medications }: QuickLogFormProps) 
       timestamp: new Date(takenAt),
       logType: 'medication',
       data: {
-        medicationId: selectedMed,
+        medicationId: selectedMedicationId,
         medicationName: med.name,
         dose: parsedDose,
         doseUnit: 'mg',
@@ -182,7 +183,7 @@ export default function QuickLogForm({ onLog, medications }: QuickLogFormProps) 
   );
 
   return (
-    <div className="card-base p-4 border border-accent-cyan/20">
+    <div className="card-base p-4 border border-card-border/90">
       {/* Tabs */}
       <div className="flex gap-1 mb-4">
         {(['dose', 'mood', 'focus'] as const).map((tab) => (
@@ -195,11 +196,7 @@ export default function QuickLogForm({ onLog, medications }: QuickLogFormProps) 
                 : 'bg-card-border/20 text-muted hover:bg-card-border/30'
             }`}
           >
-            {tab === 'dose'
-              ? '💊 Dose'
-              : tab === 'mood'
-                ? '😊 Mood'
-                : '🎯 Focus'}
+            {tab === 'dose' ? 'Dose' : tab === 'mood' ? 'Mood' : 'Focus'}
           </button>
         ))}
       </div>
@@ -210,7 +207,7 @@ export default function QuickLogForm({ onLog, medications }: QuickLogFormProps) 
           <div>
             <label className="text-label mb-2 block">Medication</label>
             <select
-              value={selectedMed}
+              value={selectedMedicationId}
               onChange={(e) => setSelectedMed(e.target.value)}
               className="input-base"
             >
@@ -269,7 +266,7 @@ export default function QuickLogForm({ onLog, medications }: QuickLogFormProps) 
 
           <button
             type="submit"
-            disabled={loading || !selectedMed || Number(dose) <= 0 || (doseTimeMode === 'custom' && !customTakenAt)}
+            disabled={loading || !selectedMedicationId || Number(dose) <= 0 || (doseTimeMode === 'custom' && !customTakenAt)}
             className="w-full btn-primary disabled:opacity-50"
           >
             {loading ? 'Logging...' : 'Log Dose'}

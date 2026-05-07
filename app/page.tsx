@@ -88,7 +88,13 @@ export default function Dashboard() {
       } else {
         const meds = await getMedicationProfiles();
         setLogs(existingLogs);
-        setMedications(meds);
+        if (meds.length > 0) {
+          setMedications(meds);
+        } else {
+          const presetMeds = Object.values(MEDICATION_PRESETS);
+          await Promise.all(presetMeds.map((med) => addMedicationProfile(med)));
+          setMedications(presetMeds);
+        }
       }
     };
 
@@ -285,9 +291,14 @@ export default function Dashboard() {
       <Header onOpenInfo={() => setIsInfoOpen(true)} />
       <InfoModal isOpen={isInfoOpen} onClose={() => setIsInfoOpen(false)} logs={logs} medications={medications} onMedicationSaved={handleMedicationSaved} effectiveRange={effectiveRange} onEffectiveRangeSaved={handleEffectiveRangeSaved} />
 
-      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
-          <QuickLogForm onLog={handleLog} medications={medications} />
+      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-7">
+        <div className="flex flex-col gap-2">
+          <h2 className="text-2xl font-semibold tracking-tight text-foreground">Today</h2>
+          <p className="text-sm font-medium text-muted">Medication activation, focus quality, and recovery signals in one local dashboard.</p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <QuickLogForm onLog={handleLog} medications={medications.length > 0 ? medications : Object.values(MEDICATION_PRESETS)} />
         </div>
 
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleWidgetDragEnd}>
@@ -313,7 +324,7 @@ export default function Dashboard() {
           </SortableContext>
         </DndContext>
 
-        <div className="text-center text-muted text-xs pt-8 border-t border-card-border/30">
+        <div className="text-center text-muted text-xs pt-8 border-t border-card-border/80">
           <p>Flow • Local-first cognitive tracking • v0.1.0</p>
           <p className="mt-2">Data stored locally. No external synchronization.</p>
         </div>
