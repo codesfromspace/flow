@@ -72,6 +72,7 @@ export interface MedicationProfile {
   duration: number;
   strength: number;
   defaultDose?: number;
+  referenceDose?: number;
   releaseType?: MedicationReleaseType;
 }
 

@@ -121,6 +121,7 @@ ${sleepLogs.map(log => `- Kvalita: ${log.data.quality}/5, Trvání: ${log.data.d
       id: uuidv4(),
       name: medForm.name.trim(),
       defaultDose: Number(medForm.defaultDose),
+      referenceDose: Number(medForm.defaultDose),
       onset: Number(medForm.onset),
       peak: Number(medForm.peak),
       halfLife: Number(medForm.halfLife),
@@ -348,7 +349,7 @@ ${sleepLogs.map(log => `- Kvalita: ${log.data.quality}/5, Trvání: ${log.data.d
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-muted block mb-2">Výchozí dávka mg</label>
+                    <label className="text-xs font-medium text-muted block mb-2">Běžná dávka mg</label>
                     <input type="number" min="0.1" step="0.1" value={medForm.defaultDose} onChange={(e) => setMedForm({ ...medForm, defaultDose: e.target.value })} className="input-base text-sm" />
                   </div>
                   <div>

@@ -10,6 +10,7 @@ export const MEDICATION_PRESETS: Record<string, MedicationProfile> = {
     duration: 660,
     strength: 1,
     defaultDose: 10,
+    referenceDose: 10,
     releaseType: 'instant',
   },
   'methylphenidate-ir': {
@@ -20,7 +21,8 @@ export const MEDICATION_PRESETS: Record<string, MedicationProfile> = {
     halfLife: 3,
     duration: 300,
     strength: 0.85,
-    defaultDose: 20,
+    defaultDose: 10,
+    referenceDose: 10,
     releaseType: 'instant',
   },
   'methylphenidate-xr': {
@@ -31,7 +33,8 @@ export const MEDICATION_PRESETS: Record<string, MedicationProfile> = {
     halfLife: 6,
     duration: 600,
     strength: 0.9,
-    defaultDose: 36,
+    defaultDose: 18,
+    referenceDose: 18,
     releaseType: 'extended',
   },
   caffeine: {
@@ -43,6 +46,7 @@ export const MEDICATION_PRESETS: Record<string, MedicationProfile> = {
     duration: 360,
     strength: 0.3,
     defaultDose: 100,
+    referenceDose: 100,
     releaseType: 'instant',
   },
 };
@@ -69,7 +73,8 @@ export function calculateDoseConcentration(event: DoseEvent, currentTime: number
 
   if (elapsedMinutes >= duration) return 0;
 
-  const doseScale = event.dose / Math.max(event.profile.defaultDose ?? 20, 1);
+  const referenceDose = event.profile.referenceDose ?? event.profile.defaultDose ?? 10;
+  const doseScale = event.dose / Math.max(referenceDose, 1);
   const peakLevel = clamp(doseScale * strength * 0.52, 0, 1);
 
   if (elapsedMinutes <= onset) {
