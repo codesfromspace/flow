@@ -83,11 +83,11 @@ Legend: ✅ Complete | ⏳ Ready to use | ❌ Not started
 ```bash
 cd "Documents/claude code/flow"
 npm install  # Already done
-npm run dev  # Start dev server on http://localhost:3000
+npm run dev  # Start dev server on http://localhost:3001
 ```
 
 ### 2. Navigate to Dashboard
-Open `http://localhost:3000` in your browser. The app will:
+Open `http://localhost:3001` in your browser. The app will:
 - Initialize IndexedDB
 - Seed mock data (7 days of realistic logs)
 - Display the full cognitive dashboard
