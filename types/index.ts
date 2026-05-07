@@ -88,3 +88,9 @@ export interface EffectiveRange {
   upper: number;
   optimal: number;
 }
+
+export interface LocalProfile {
+  id: string;
+  displayName: string;
+  createdAt: number;
+}

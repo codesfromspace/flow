@@ -25,7 +25,7 @@ import QuickLogForm from '@/components/core/QuickLogForm';
 import DraggableWidget from '@/components/core/DraggableWidget';
 import { useIndexedDB } from '@/lib/hooks/useIndexedDB';
 import { useWidgetOrder } from '@/lib/hooks/useWidgetOrder';
-import { generateMockData, generateTimelineData } from '@/lib/utils/mock-data';
+import { generateTimelineData } from '@/lib/utils/mock-data';
 import {
   calculateCumulativeConcentration,
   calculateSleepPressure,
@@ -36,8 +36,9 @@ import {
   DEFAULT_EFFECTIVE_RANGE,
   normalizeEffectiveRange,
 } from '@/lib/utils/cognitive-math';
-import { addLog, addMedicationProfile, getAllLogs, getSetting } from '@/lib/store/db';
-import { CognitiveLog, EffectiveRange, MedicationLog, MedicationProfile, UserProfile } from '@/types';
+import { addLog, addMedicationProfile, getAllLogs, getSetting, setSetting } from '@/lib/store/db';
+import { CognitiveLog, EffectiveRange, LocalProfile, MedicationLog, MedicationProfile, UserProfile } from '@/types';
+import { v4 as uuidv4 } from 'uuid';
 
 const INITIAL_TIME = 0;
 
@@ -62,6 +63,9 @@ export default function Dashboard() {
   const [medications, setMedications] = useState<MedicationProfile[]>([]);
   const [logs, setLogs] = useState<CognitiveLog[]>([]);
   const [currentTime, setCurrentTime] = useState(INITIAL_TIME);
+  const [profileLoaded, setProfileLoaded] = useState(false);
+  const [localProfile, setLocalProfile] = useState<LocalProfile | null>(null);
+  const [profileNameInput, setProfileNameInput] = useState('');
   const [sleepPressure, setSleepPressure] = useState(45);
   const [focusLevel, setFocusLevel] = useState(65);
   const [reboundRisk, setReboundRisk] = useState<'none' | 'low' | 'medium' | 'high'>('low');
@@ -75,34 +79,48 @@ export default function Dashboard() {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   useEffect(() => {
-    if (!isInitialized) return;
+    let didCancel = false;
+    const fallback = window.setTimeout(() => {
+      if (!didCancel) setProfileLoaded(true);
+    }, 1500);
+
+    getSetting<LocalProfile>('localProfile')
+      .then((profile) => {
+        if (!didCancel && profile) setLocalProfile(profile);
+      })
+      .catch((err) => console.error('Failed to load local profile:', err))
+      .finally(() => {
+        if (!didCancel) {
+          window.clearTimeout(fallback);
+          setProfileLoaded(true);
+        }
+      });
+
+    return () => {
+      didCancel = true;
+      window.clearTimeout(fallback);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!localProfile) return;
 
     const initData = async () => {
       const existingLogs = await getAllLogs();
+      const meds = await getMedicationProfiles();
 
-      if (existingLogs.length === 0) {
-        const { logs: mockLogs, medications: mockMeds } = generateMockData();
-        await Promise.all([
-          ...mockMeds.map((med) => addMedicationProfile(med)),
-          ...mockLogs.map((log) => addLog(log)),
-        ]);
-        setLogs(mockLogs);
-        setMedications(mockMeds);
+      setLogs(existingLogs);
+      if (meds.length > 0) {
+        setMedications(meds);
       } else {
-        const meds = await getMedicationProfiles();
-        setLogs(existingLogs);
-        if (meds.length > 0) {
-          setMedications(meds);
-        } else {
-          const presetMeds = Object.values(MEDICATION_PRESETS);
-          await Promise.all(presetMeds.map((med) => addMedicationProfile(med)));
-          setMedications(presetMeds);
-        }
+        const presetMeds = Object.values(MEDICATION_PRESETS);
+        await Promise.all(presetMeds.map((med) => addMedicationProfile(med)));
+        setMedications(presetMeds);
       }
     };
 
     initData();
-  }, [isInitialized, getMedicationProfiles]);
+  }, [localProfile, getMedicationProfiles]);
 
   useEffect(() => {
     if (!isInitialized) return;
@@ -182,8 +200,24 @@ export default function Dashboard() {
   }, [logs, medications, userProfile.wakeUpTime, effectiveRange]);
 
   const handleLog = async (log: CognitiveLog) => {
+    if (!localProfile) return;
     await addLog(log);
     setLogs((currentLogs) => [...currentLogs, log].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime()));
+  };
+
+  const handleCreateProfile = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const displayName = profileNameInput.trim();
+    if (!displayName) return;
+
+    const profile: LocalProfile = {
+      id: uuidv4(),
+      displayName,
+      createdAt: Date.now(),
+    };
+
+    await setSetting('localProfile', profile);
+    setLocalProfile(profile);
   };
 
   const handleMedicationSaved = (profile: MedicationProfile) => {
@@ -306,9 +340,47 @@ export default function Dashboard() {
     }
   };
 
+  if (!profileLoaded) {
+    return (
+      <div className="grid min-h-screen place-items-center bg-background px-4">
+        <div className="card-base w-full max-w-md p-6">
+          <p className="text-sm font-semibold text-muted">Loading local profile</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!localProfile) {
+    return (
+      <div className="grid min-h-screen place-items-center bg-background px-4">
+        <form onSubmit={handleCreateProfile} className="card-base w-full max-w-md space-y-5 p-6">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Create Flow profile</h1>
+            <p className="mt-2 text-sm font-medium leading-relaxed text-muted">
+              No password for now. The profile and logs stay locally in this browser, so restarting the server will not clear your data.
+            </p>
+          </div>
+          <div>
+            <label className="text-label mb-2 block">Profile name</label>
+            <input
+              value={profileNameInput}
+              onChange={(event) => setProfileNameInput(event.target.value)}
+              className="input-base"
+              placeholder="e.g. Jakub"
+              autoFocus
+            />
+          </div>
+          <button type="submit" disabled={!profileNameInput.trim()} className="w-full btn-primary disabled:opacity-50">
+            Create profile
+          </button>
+        </form>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen overflow-hidden bg-background">
-      <Header onOpenInfo={() => setIsInfoOpen(true)} />
+      <Header onOpenInfo={() => setIsInfoOpen(true)} profileName={localProfile.displayName} />
       <InfoModal isOpen={isInfoOpen} onClose={() => setIsInfoOpen(false)} logs={logs} medications={medications} onMedicationSaved={handleMedicationSaved} effectiveRange={effectiveRange} onEffectiveRangeSaved={handleEffectiveRangeSaved} />
 
       <main className="mx-auto flex h-[calc(100vh-69px)] max-w-7xl flex-col gap-5 overflow-hidden px-4 py-6 sm:px-6 lg:px-8">

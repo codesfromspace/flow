@@ -15,7 +15,12 @@ export function useIndexedDB() {
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    initDB().then(() => setIsInitialized(true));
+    initDB()
+      .then(() => setIsInitialized(true))
+      .catch((error) => {
+        console.error('Failed to initialize IndexedDB:', error);
+        setIsInitialized(true);
+      });
   }, []);
 
   const getMedicationProfiles = useCallback(async () => {

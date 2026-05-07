@@ -5,9 +5,10 @@ import FlowLogo from './FlowLogo';
 
 interface HeaderProps {
   onOpenInfo?: () => void;
+  profileName?: string;
 }
 
-export default function Header({ onOpenInfo }: HeaderProps) {
+export default function Header({ onOpenInfo, profileName }: HeaderProps) {
   const [currentTime, setCurrentTime] = useState<string>('');
   const [currentDate, setCurrentDate] = useState<string>('');
 
@@ -57,7 +58,7 @@ export default function Header({ onOpenInfo }: HeaderProps) {
             ) : null}
             <div className="text-right">
               <div className="text-lg font-semibold tabular-nums text-foreground">{currentTime}</div>
-              <div className="text-xs font-medium text-muted">local state</div>
+              <div className="text-xs font-medium text-muted">{profileName || 'local profile'}</div>
             </div>
             <div className="h-2.5 w-2.5 rounded-full bg-[var(--accent-green)] shadow-[0_0_0_4px_rgb(47_155_114/0.12)]" />
           </div>
