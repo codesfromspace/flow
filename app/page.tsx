@@ -57,6 +57,76 @@ interface ActivationDataPoint {
 
 type AppPage = 'overview' | 'log' | 'activation' | 'timeline';
 
+interface OverviewBriefProps {
+  profileName: string;
+  todayLogCount: number;
+  totalLogCount: number;
+  lastLogLabel: string;
+  activeMedicationNames: string[];
+  effectiveRange: EffectiveRange;
+  onOpenLog: () => void;
+  onOpenActivation: () => void;
+}
+
+function OverviewBrief({
+  profileName,
+  todayLogCount,
+  totalLogCount,
+  lastLogLabel,
+  activeMedicationNames,
+  effectiveRange,
+  onOpenLog,
+  onOpenActivation,
+}: OverviewBriefProps) {
+  const hasActiveMedication = activeMedicationNames.length > 0;
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(280px,0.75fr)]">
+      <div className="card-elevated overflow-hidden p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-label mb-1">Today for {profileName}</p>
+            <h3 className="text-2xl font-semibold tracking-tight text-foreground">
+              {todayLogCount > 0 ? `${todayLogCount} real entries logged today` : 'Ready for the first real entry'}
+            </h3>
+            <p className="mt-2 max-w-2xl text-sm font-medium leading-relaxed text-muted">
+              {todayLogCount > 0
+                ? `Latest: ${lastLogLabel}. Flow is using your saved browser data, not demo logs.`
+                : 'No demo history is injected anymore. Add one dose, mood, or focus check and this overview will start calibrating from your own data.'}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={onOpenLog} className="btn-primary">
+              Add log
+            </button>
+            <button type="button" onClick={onOpenActivation} className="btn-secondary">
+              Tune range
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="card-base grid grid-cols-3 gap-3 p-4">
+        <div className="rounded-xl border border-card-border/70 bg-card-border/10 p-3">
+          <p className="text-xs font-semibold uppercase text-muted">Saved</p>
+          <p className="mt-1 text-xl font-semibold text-foreground">{totalLogCount}</p>
+          <p className="text-xs font-medium text-muted">logs</p>
+        </div>
+        <div className="rounded-xl border border-card-border/70 bg-card-border/10 p-3">
+          <p className="text-xs font-semibold uppercase text-muted">Active</p>
+          <p className="mt-1 text-xl font-semibold text-foreground">{hasActiveMedication ? activeMedicationNames.length : 0}</p>
+          <p className="truncate text-xs font-medium text-muted">{hasActiveMedication ? activeMedicationNames.join(', ') : 'none'}</p>
+        </div>
+        <div className="rounded-xl border border-card-border/70 bg-card-border/10 p-3">
+          <p className="text-xs font-semibold uppercase text-muted">Range</p>
+          <p className="mt-1 text-xl font-semibold text-foreground">{effectiveRange.lower}-{effectiveRange.upper}%</p>
+          <p className="text-xs font-medium text-muted">useful</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const { isInitialized, getMedicationProfiles } = useIndexedDB();
   const { widgetOrder, moveWidget } = useWidgetOrder();
@@ -259,6 +329,8 @@ export default function Dashboard() {
       return { time: log.timestamp.getTime(), type, label };
     });
 
+  const todayLogCount = todayEvents.length;
+
   const recentLogs = [...logs]
     .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
     .slice(0, 8)
@@ -275,6 +347,11 @@ export default function Dashboard() {
         time: log.timestamp.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
       };
     });
+
+  const lastLogLabel = recentLogs[0]?.label ?? 'No logs yet';
+  const activeMedicationNames = activeMeds
+    .map((medicationId) => medications.find((medication) => medication.id === medicationId)?.name ?? medicationId)
+    .filter(Boolean);
 
   const renderWidget = (widgetId: string, index: number) => {
     const wrapperProps = {
@@ -425,13 +502,25 @@ export default function Dashboard() {
 
         <section className="min-h-0 flex-1 overflow-hidden">
           {activePage === 'overview' ? (
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleWidgetDragEnd}>
-              <SortableContext items={widgetOrder} strategy={rectSortingStrategy}>
-                <div className="grid h-full grid-cols-1 gap-4 auto-rows-fr md:grid-cols-2 lg:grid-cols-4">
-                  {widgetOrder.slice(0, 6).map((widgetId, idx) => renderWidget(widgetId, idx))}
-                </div>
-              </SortableContext>
-            </DndContext>
+            <div className="grid h-full grid-rows-[auto_minmax(0,1fr)] gap-4">
+              <OverviewBrief
+                profileName={localProfile.displayName}
+                todayLogCount={todayLogCount}
+                totalLogCount={logs.length}
+                lastLogLabel={lastLogLabel}
+                activeMedicationNames={activeMedicationNames}
+                effectiveRange={effectiveRange}
+                onOpenLog={() => setActivePage('log')}
+                onOpenActivation={() => setActivePage('activation')}
+              />
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleWidgetDragEnd}>
+                <SortableContext items={widgetOrder} strategy={rectSortingStrategy}>
+                  <div className="grid min-h-0 grid-cols-1 gap-4 auto-rows-fr md:grid-cols-2 lg:grid-cols-4">
+                    {widgetOrder.slice(0, 6).map((widgetId, idx) => renderWidget(widgetId, idx))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            </div>
           ) : null}
 
           {activePage === 'log' ? (
