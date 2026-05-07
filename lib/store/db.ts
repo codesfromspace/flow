@@ -44,6 +44,11 @@ export async function addLog(log: CognitiveLog) {
   return database.put(STORES.LOGS, log);
 }
 
+export async function deleteLog(id: string) {
+  const database = await initDB();
+  return database.delete(STORES.LOGS, id);
+}
+
 export async function getAllLogs(limit?: number): Promise<CognitiveLog[]> {
   const database = await initDB();
   const allLogs = (await database.getAll(STORES.LOGS)) as CognitiveLog[];

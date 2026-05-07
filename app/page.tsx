@@ -36,7 +36,7 @@ import {
   DEFAULT_EFFECTIVE_RANGE,
   normalizeEffectiveRange,
 } from '@/lib/utils/cognitive-math';
-import { addLog, addMedicationProfile, getAllLogs, getSetting, setSetting } from '@/lib/store/db';
+import { addLog, addMedicationProfile, deleteLog, getAllLogs, getSetting, setSetting } from '@/lib/store/db';
 import { CognitiveLog, EffectiveRange, LocalProfile, MedicationLog, MedicationProfile, UserProfile } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -277,6 +277,14 @@ export default function Dashboard() {
     if (!localProfile) return;
     await addLog(log);
     setLogs((currentLogs) => [...currentLogs, log].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime()));
+  };
+
+  const handleDeleteDose = async (id: string) => {
+    const log = logs.find((entry) => entry.id === id);
+    if (log?.logType !== 'medication') return;
+
+    await deleteLog(id);
+    setLogs((currentLogs) => currentLogs.filter((entry) => entry.id !== id));
   };
 
   const handleSaveWakeTime = async (event: React.FormEvent) => {
@@ -624,7 +632,19 @@ export default function Dashboard() {
                         <p className="text-sm font-semibold text-foreground">{log.label}</p>
                         <p className="text-xs font-medium capitalize text-muted">{log.type.replace('_', ' ')}</p>
                       </div>
-                      <span className="text-sm font-semibold tabular-nums text-muted">{log.time}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-semibold tabular-nums text-muted">{log.time}</span>
+                        {log.type === 'medication' ? (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteDose(log.id)}
+                            className="rounded-lg border border-card-border/80 px-2 py-1 text-xs font-semibold text-muted transition hover:border-[var(--accent-red)]/40 hover:bg-[var(--accent-red)]/10 hover:text-[var(--accent-red)]"
+                            title="Delete dose"
+                          >
+                            Delete
+                          </button>
+                        ) : null}
+                      </div>
                     </div>
                   ))}
                 </div>
