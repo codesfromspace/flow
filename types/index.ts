@@ -82,3 +82,9 @@ export interface UserProfile {
   height?: number;
   wakeUpTime?: string;
 }
+
+export interface EffectiveRange {
+  lower: number;
+  upper: number;
+  optimal: number;
+}

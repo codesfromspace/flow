@@ -33,9 +33,11 @@ import {
   estimateReboundRisk,
   estimateMentalLoad,
   MEDICATION_PRESETS,
+  DEFAULT_EFFECTIVE_RANGE,
+  normalizeEffectiveRange,
 } from '@/lib/utils/cognitive-math';
 import { addLog, addMedicationProfile, getAllLogs, getSetting } from '@/lib/store/db';
-import { CognitiveLog, MedicationLog, MedicationProfile, UserProfile } from '@/types';
+import { CognitiveLog, EffectiveRange, MedicationLog, MedicationProfile, UserProfile } from '@/types';
 
 const INITIAL_TIME = 0;
 
@@ -66,6 +68,7 @@ export default function Dashboard() {
   const [hydrationLevel] = useState<1 | 2 | 3 | 4 | 5>(3);
   const [isInfoOpen, setIsInfoOpen] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile>({});
+  const [effectiveRange, setEffectiveRange] = useState<EffectiveRange>(DEFAULT_EFFECTIVE_RANGE);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   useEffect(() => {
@@ -100,6 +103,12 @@ export default function Dashboard() {
         if (profile) setUserProfile(profile);
       })
       .catch((err) => console.error('Failed to load user profile:', err));
+
+    getSetting<EffectiveRange>('effectiveRange')
+      .then((range) => {
+        if (range) setEffectiveRange(normalizeEffectiveRange(range));
+      })
+      .catch((err) => console.error('Failed to load effective range:', err));
   }, [isInitialized]);
 
   useEffect(() => {
@@ -123,7 +132,7 @@ export default function Dashboard() {
         });
 
       const { total: concentration, byMedication } = calculateCumulativeConcentration(recentDoses, now);
-      const focus = Math.round(estimateFocusFromConcentration(concentration, 50));
+      const focus = Math.round(estimateFocusFromConcentration(concentration, 50, effectiveRange));
       const rebound = estimateReboundRisk(concentration);
 
       let lastSleepTime = logs
@@ -155,13 +164,13 @@ export default function Dashboard() {
       today.setHours(0, 0, 0, 0);
       const dayStart = today.getTime();
       const dayEnd = dayStart + 24 * 60 * 60 * 1000;
-      setTimelineData(generateTimelineData(dayStart, dayEnd, recentDoses.filter((dose) => dose.timestamp >= dayStart)));
+      setTimelineData(generateTimelineData(dayStart, dayEnd, recentDoses.filter((dose) => dose.timestamp >= dayStart), effectiveRange));
     };
 
     updateState();
     const interval = setInterval(updateState, 60000);
     return () => clearInterval(interval);
-  }, [logs, medications, userProfile.wakeUpTime]);
+  }, [logs, medications, userProfile.wakeUpTime, effectiveRange]);
 
   const handleLog = async (log: CognitiveLog) => {
     await addLog(log);
@@ -170,6 +179,10 @@ export default function Dashboard() {
 
   const handleMedicationSaved = (profile: MedicationProfile) => {
     setMedications((currentMedications) => [...currentMedications, profile]);
+  };
+
+  const handleEffectiveRangeSaved = (range: EffectiveRange) => {
+    setEffectiveRange(normalizeEffectiveRange(range));
   };
 
   const handleWidgetDragEnd = (event: DragEndEvent) => {
@@ -252,7 +265,7 @@ export default function Dashboard() {
         return (
           <DraggableWidget key={widgetId} id={widgetId} size="full" {...wrapperProps}>
             {timelineData.length > 0 ? (
-              <ActivationCurve data={timelineData} medications={medications.map((m) => ({ name: m.name, color: '#22d3ee', doseTime: 0 }))} currentTime={currentTime} />
+              <ActivationCurve data={timelineData} medications={medications.map((m) => ({ name: m.name, color: '#22d3ee', doseTime: 0 }))} currentTime={currentTime} effectiveRange={effectiveRange} />
             ) : null}
           </DraggableWidget>
         );
@@ -270,7 +283,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-background">
       <Header onOpenInfo={() => setIsInfoOpen(true)} />
-      <InfoModal isOpen={isInfoOpen} onClose={() => setIsInfoOpen(false)} logs={logs} medications={medications} onMedicationSaved={handleMedicationSaved} />
+      <InfoModal isOpen={isInfoOpen} onClose={() => setIsInfoOpen(false)} logs={logs} medications={medications} onMedicationSaved={handleMedicationSaved} effectiveRange={effectiveRange} onEffectiveRangeSaved={handleEffectiveRangeSaved} />
 
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">

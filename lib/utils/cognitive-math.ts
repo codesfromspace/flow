@@ -1,4 +1,4 @@
-import { MedicationProfile } from '@/types';
+import { EffectiveRange, MedicationProfile } from '@/types';
 
 export const MEDICATION_PRESETS: Record<string, MedicationProfile> = {
   'amphetamine-ir': {
@@ -57,7 +57,7 @@ export interface DoseEvent {
   profile: MedicationProfile;
 }
 
-export const EFFECTIVE_RANGE = {
+export const DEFAULT_EFFECTIVE_RANGE: EffectiveRange = {
   lower: 0.18,
   upper: 0.55,
   optimal: 0.38,
@@ -112,9 +112,17 @@ export function calculateCumulativeConcentration(doseEvents: DoseEvent[], curren
   };
 }
 
-export function estimateFocusFromConcentration(concentration: number, baseline: number = 50) {
-  const underTargetGain = Math.min(concentration, EFFECTIVE_RANGE.optimal) * 88;
-  const aboveTarget = Math.max(0, concentration - EFFECTIVE_RANGE.upper);
+export function normalizeEffectiveRange(range?: EffectiveRange): EffectiveRange {
+  const lower = clamp(range?.lower ?? DEFAULT_EFFECTIVE_RANGE.lower, 0.01, 0.95);
+  const upper = clamp(range?.upper ?? DEFAULT_EFFECTIVE_RANGE.upper, lower + 0.01, 1);
+  const optimal = clamp(range?.optimal ?? DEFAULT_EFFECTIVE_RANGE.optimal, lower, upper);
+  return { lower, upper, optimal };
+}
+
+export function estimateFocusFromConcentration(concentration: number, baseline: number = 50, range?: EffectiveRange) {
+  const effectiveRange = normalizeEffectiveRange(range);
+  const underTargetGain = Math.min(concentration, effectiveRange.optimal) * 88;
+  const aboveTarget = Math.max(0, concentration - effectiveRange.upper);
   const overstimulationPenalty = aboveTarget * 85;
   return clamp(baseline + underTargetGain - overstimulationPenalty, 0, 100);
 }

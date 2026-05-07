@@ -1,5 +1,5 @@
 import { IDBPDatabase, openDB } from 'idb';
-import { CognitiveLog, MedicationProfile, UserProfile } from '@/types';
+import { CognitiveLog, EffectiveRange, MedicationProfile, UserProfile } from '@/types';
 
 let db: IDBPDatabase;
 
@@ -11,7 +11,7 @@ const STORES = {
   SETTINGS: 'settings',
 } as const;
 
-type SettingValue = string[] | UserProfile;
+type SettingValue = string[] | UserProfile | EffectiveRange;
 
 export async function initDB() {
   if (db) return db;

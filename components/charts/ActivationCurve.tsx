@@ -1,7 +1,8 @@
 'use client';
 
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceArea, Legend } from 'recharts';
-import { EFFECTIVE_RANGE } from '@/lib/utils/cognitive-math';
+import { normalizeEffectiveRange } from '@/lib/utils/cognitive-math';
+import { EffectiveRange } from '@/types';
 
 interface DataPoint {
   time: string;
@@ -14,9 +15,11 @@ interface ActivationCurveProps {
   data: DataPoint[];
   medications: Array<{ name: string; color: string; doseTime: number }>;
   currentTime: number;
+  effectiveRange?: EffectiveRange;
 }
 
-export default function ActivationCurve({ data, medications, currentTime }: ActivationCurveProps) {
+export default function ActivationCurve({ data, medications, currentTime, effectiveRange }: ActivationCurveProps) {
+  const range = normalizeEffectiveRange(effectiveRange);
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload[0]) {
       return (
@@ -111,8 +114,8 @@ export default function ActivationCurve({ data, medications, currentTime }: Acti
           <Legend height={20} wrapperStyle={{ paddingBottom: 0 }} />
 
           <ReferenceArea
-            y1={EFFECTIVE_RANGE.lower}
-            y2={EFFECTIVE_RANGE.upper}
+            y1={range.lower}
+            y2={range.upper}
             fill="#10b981"
             fillOpacity={0.08}
             stroke="#10b981"
@@ -194,7 +197,7 @@ export default function ActivationCurve({ data, medications, currentTime }: Acti
         </div>
         <div className="border-t border-card-border/20 pt-2">
           <p className="text-xs text-muted">
-            <strong>Tip:</strong> Pokud dobrý fokus pravidelně přichází níž nebo výš než pásmo, uprav v profilu medikace sílu efektu nebo výchozí dávku.
+              <strong>Tip:</strong> Pokud dobrý fokus pravidelně přichází níž nebo výš než pásmo, uprav useful range v nastavení podle své zkušenosti.
           </p>
         </div>
       </div>

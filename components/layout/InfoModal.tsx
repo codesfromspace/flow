@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { addMedicationProfile, clearAllData, getSetting, setSetting } from '@/lib/store/db';
-import { CognitiveLog, MedicationProfile, UserProfile } from '@/types';
+import { DEFAULT_EFFECTIVE_RANGE, normalizeEffectiveRange } from '@/lib/utils/cognitive-math';
+import { CognitiveLog, EffectiveRange, MedicationProfile, UserProfile } from '@/types';
 
 interface InfoModalProps {
   isOpen: boolean;
@@ -11,6 +12,8 @@ interface InfoModalProps {
   logs: CognitiveLog[];
   medications: MedicationProfile[];
   onMedicationSaved: (profile: MedicationProfile) => void;
+  effectiveRange: EffectiveRange;
+  onEffectiveRangeSaved: (range: EffectiveRange) => void;
 }
 
 type MedicationForm = {
@@ -24,10 +27,15 @@ type MedicationForm = {
   releaseType: 'instant' | 'extended';
 };
 
-export default function InfoModal({ isOpen, onClose, logs, medications, onMedicationSaved }: InfoModalProps) {
+export default function InfoModal({ isOpen, onClose, logs, medications, onMedicationSaved, effectiveRange, onEffectiveRangeSaved }: InfoModalProps) {
   const [activeTab, setActiveTab] = useState<'info' | 'export' | 'settings'>('info');
   const [exportStatus, setExportStatus] = useState('');
   const [userProfile, setUserProfile] = useState<UserProfile>({});
+  const [rangeForm, setRangeForm] = useState({
+    lower: String(Math.round(effectiveRange.lower * 100)),
+    optimal: String(Math.round(effectiveRange.optimal * 100)),
+    upper: String(Math.round(effectiveRange.upper * 100)),
+  });
   const [profileSaved, setProfileSaved] = useState(false);
   const [medForm, setMedForm] = useState<MedicationForm>({
     name: '',
@@ -46,6 +54,13 @@ export default function InfoModal({ isOpen, onClose, logs, medications, onMedica
       try {
         const profile = await getSetting<UserProfile>('userProfile');
         if (profile) setUserProfile(profile);
+        const savedRange = await getSetting<EffectiveRange>('effectiveRange');
+        const range = normalizeEffectiveRange(savedRange ?? effectiveRange);
+        setRangeForm({
+          lower: String(Math.round(range.lower * 100)),
+          optimal: String(Math.round(range.optimal * 100)),
+          upper: String(Math.round(range.upper * 100)),
+        });
       } catch (err) {
         console.error('Failed to load profile:', err);
       }
@@ -114,6 +129,33 @@ ${sleepLogs.map(log => `- Kvalita: ${log.data.quality}/5, Trvání: ${log.data.d
     } catch (err) {
       console.error('Failed to save profile:', err);
     }
+  };
+
+  const handleSaveEffectiveRange = async () => {
+    const range = normalizeEffectiveRange({
+      lower: Number(rangeForm.lower) / 100,
+      optimal: Number(rangeForm.optimal) / 100,
+      upper: Number(rangeForm.upper) / 100,
+    });
+
+    await setSetting('effectiveRange', range);
+    onEffectiveRangeSaved(range);
+    setRangeForm({
+      lower: String(Math.round(range.lower * 100)),
+      optimal: String(Math.round(range.optimal * 100)),
+      upper: String(Math.round(range.upper * 100)),
+    });
+    setProfileSaved(true);
+    setTimeout(() => setProfileSaved(false), 2000);
+  };
+
+  const handleResetEffectiveRange = () => {
+    const range = DEFAULT_EFFECTIVE_RANGE;
+    setRangeForm({
+      lower: String(Math.round(range.lower * 100)),
+      optimal: String(Math.round(range.optimal * 100)),
+      upper: String(Math.round(range.upper * 100)),
+    });
   };
 
   const handleSaveMedication = async () => {
@@ -323,6 +365,64 @@ ${sleepLogs.map(log => `- Kvalita: ${log.data.quality}/5, Trvání: ${log.data.d
                   💾 Uložit profil
                 </button>
                 {profileSaved && <p className="text-xs text-accent-cyan">✓ Profil uložen</p>}
+              </div>
+
+              <div className="space-y-4 border-b border-card-border/30 pb-4">
+                <h4 className="font-medium text-sm">Useful range kalibrace</h4>
+                <p className="text-xs text-muted">
+                  Nastav relativní aktivační pásmo podle toho, kde subjektivně cítíš užitečný efekt. Hodnoty nejsou krevní koncentrace.
+                </p>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-muted block mb-2">Dolní hranice %</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="95"
+                      value={rangeForm.lower}
+                      onChange={(e) => setRangeForm({ ...rangeForm, lower: e.target.value })}
+                      className="input-base text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted block mb-2">Sweet spot %</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={rangeForm.optimal}
+                      onChange={(e) => setRangeForm({ ...rangeForm, optimal: e.target.value })}
+                      className="input-base text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted block mb-2">Horní hranice %</label>
+                    <input
+                      type="number"
+                      min="2"
+                      max="100"
+                      value={rangeForm.upper}
+                      onChange={(e) => setRangeForm({ ...rangeForm, upper: e.target.value })}
+                      className="input-base text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSaveEffectiveRange}
+                    className="flex-1 px-4 py-2 rounded-lg bg-accent-cyan/20 text-accent-cyan hover:bg-accent-cyan/30 transition text-sm font-medium"
+                  >
+                    Uložit useful range
+                  </button>
+                  <button
+                    onClick={handleResetEffectiveRange}
+                    className="px-4 py-2 rounded-lg bg-card-border/20 text-muted hover:bg-card-border/30 transition text-sm font-medium"
+                  >
+                    Reset
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-4 border-b border-card-border/30 pb-4">

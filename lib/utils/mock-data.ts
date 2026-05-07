@@ -1,4 +1,4 @@
-import { CognitiveLog } from '@/types';
+import { CognitiveLog, EffectiveRange } from '@/types';
 import { MEDICATION_PRESETS, calculateCumulativeConcentration, estimateFocusFromConcentration, DoseEvent } from './cognitive-math';
 
 export function generateMockData(): {
@@ -42,7 +42,7 @@ export function generateMockData(): {
   return { logs, medications };
 }
 
-export function generateTimelineData(startTime: number, endTime: number, doses: DoseEvent[]) {
+export function generateTimelineData(startTime: number, endTime: number, doses: DoseEvent[], effectiveRange?: EffectiveRange) {
   const points = [];
   const interval = 15 * 60 * 1000;
 
@@ -54,7 +54,7 @@ export function generateTimelineData(startTime: number, endTime: number, doses: 
       hour12: false,
     });
 
-    const focus = Math.round(estimateFocusFromConcentration(totalConcentration, 50));
+    const focus = Math.round(estimateFocusFromConcentration(totalConcentration, 50, effectiveRange));
     points.push({
       time: timeStr,
       timestamp: time,
