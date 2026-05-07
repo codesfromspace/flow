@@ -103,10 +103,10 @@ export default function PharmacologyInfo() {
             </div>
           </div>
           <ul className="text-muted space-y-1 ml-3">
-            <li>• <strong>0.0-0.3:</strong> Nedostatečná (málo efektu)</li>
-            <li>• <strong>0.3-0.75:</strong> Optimum (best focus)</li>
-            <li>• <strong>0.75-1.0:</strong> Přestimulace (úzkost, tremor)</li>
-            <li>• <strong>&gt;1.0:</strong> Toxická (nebezpečné)</li>
+            <li>• <strong>0.00-0.18:</strong> Nízká relativní aktivace</li>
+            <li>• <strong>0.18-0.55:</strong> Odhad užitečného rozsahu</li>
+            <li>• <strong>0.55-1.00:</strong> Vyšší riziko přestimulace</li>
+            <li>• <strong>Pozn.:</strong> Nejde o krevní koncentraci ani dávkovací doporučení.</li>
           </ul>
         </div>
       ),

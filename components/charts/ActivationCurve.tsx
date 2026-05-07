@@ -1,6 +1,7 @@
 'use client';
 
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Legend } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceArea, Legend } from 'recharts';
+import { EFFECTIVE_RANGE } from '@/lib/utils/cognitive-math';
 
 interface DataPoint {
   time: string;
@@ -23,7 +24,7 @@ export default function ActivationCurve({ data, medications, currentTime }: Acti
           <p className="text-xs font-medium text-foreground">{payload[0].payload.time}</p>
           {payload.map((entry: any, index: number) => (
             <p key={index} className="text-xs" style={{ color: entry.color }}>
-              {entry.name}: {entry.value.toFixed(2)}
+              {entry.name}: {Math.round(entry.value * 100)}%
             </p>
           ))}
         </div>
@@ -104,10 +105,20 @@ export default function ActivationCurve({ data, medications, currentTime }: Acti
             domain={[0, 1]}
             ticks={[0, 0.25, 0.5, 0.75, 1]}
             tickFormatter={(value) => `${Math.round(value * 100)}%`}
-            label={{ value: 'Concentration (%)', angle: -90, position: 'insideLeft' }}
+            label={{ value: 'Relative activation', angle: -90, position: 'insideLeft' }}
           />
           <Tooltip content={<CustomTooltip />} />
           <Legend height={20} wrapperStyle={{ paddingBottom: 0 }} />
+
+          <ReferenceArea
+            y1={EFFECTIVE_RANGE.lower}
+            y2={EFFECTIVE_RANGE.upper}
+            fill="#10b981"
+            fillOpacity={0.08}
+            stroke="#10b981"
+            strokeOpacity={0.28}
+            label={{ value: 'Estimated useful range', position: 'insideTopRight', fill: '#10b981', fontSize: 11 }}
+          />
 
           {timing && (
             <>
@@ -146,17 +157,6 @@ export default function ActivationCurve({ data, medications, currentTime }: Acti
             name="Actual concentration"
           />
 
-          <Area
-            type="monotone"
-            dataKey="optimalFocus"
-            stroke="#94a3b8"
-            strokeWidth={2}
-            strokeDasharray="5 5"
-            fill="none"
-            isAnimationActive={false}
-            name="Target zone (optimal)"
-            opacity={0.6}
-          />
         </AreaChart>
       </ResponsiveContainer>
 
@@ -178,7 +178,7 @@ export default function ActivationCurve({ data, medications, currentTime }: Acti
           <p className="text-sm font-medium text-accent-cyan">
             {(() => {
               const current = data.find(d => d.timestamp >= currentTime) || data[data.length - 1];
-              return (current?.concentration.toFixed(2) || '0.00') + ' / 100%';
+              return Math.round((current?.concentration ?? 0) * 100) + '% relative';
             })()}
           </p>
         </div>
@@ -188,13 +188,13 @@ export default function ActivationCurve({ data, medications, currentTime }: Acti
         <div>
           <p className="text-xs font-medium mb-2">Křivky vysvětleny:</p>
           <ul className="text-xs text-muted space-y-1">
-            <li><strong>Modrá křivka (Actual)</strong> = Skutečná farmakokinetika tvé medicíny. Absorbce → Peak → Pokles. Odvislá na čase, dávce a tvém těle.</li>
-            <li><strong>Šedá přerušovaná (Target)</strong> = Ideální zóna pro maximální fokus. Ukazuje, kde by měla být koncentrace pro nejlepší výkon.</li>
+            <li><strong>Modrá křivka</strong> = Relativní aktivace podle času, dávky, onsetu, peaku a half-life. Není to krevní koncentrace v procentech.</li>
+            <li><strong>Zelené pásmo</strong> = Odhad užitečného rozsahu efektu. Není univerzální cíl a má se kalibrovat podle tvé zkušenosti.</li>
           </ul>
         </div>
         <div className="border-t border-card-border/20 pt-2">
           <p className="text-xs text-muted">
-            <strong>💡 Tipy:</strong> Pokud je Actual daleko pod Target, je málo efektu. Pokud je výrazně nad, hrozí přestimulace (úzkost, třes).
+            <strong>Tip:</strong> Pokud dobrý fokus pravidelně přichází níž nebo výš než pásmo, uprav v profilu medikace sílu efektu nebo výchozí dávku.
           </p>
         </div>
       </div>

@@ -55,15 +55,11 @@ export function generateTimelineData(startTime: number, endTime: number, doses: 
     });
 
     const focus = Math.round(estimateFocusFromConcentration(totalConcentration, 50));
-    const deviation = Math.abs(totalConcentration - 0.62) / 0.18;
-    const actualCurve = Math.exp(-0.5 * deviation * deviation);
-
     points.push({
       time: timeStr,
       timestamp: time,
       concentration: totalConcentration,
       focus: Math.max(0, Math.min(100, focus)),
-      optimalFocus: Math.max(actualCurve, 0.75),
     });
   }
 

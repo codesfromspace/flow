@@ -50,7 +50,6 @@ interface ActivationDataPoint {
   concentration: number;
   focus: number;
   timestamp: number;
-  optimalFocus: number;
 }
 
 export default function Dashboard() {

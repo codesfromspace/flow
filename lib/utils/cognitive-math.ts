@@ -53,6 +53,12 @@ export interface DoseEvent {
   profile: MedicationProfile;
 }
 
+export const EFFECTIVE_RANGE = {
+  lower: 0.18,
+  upper: 0.55,
+  optimal: 0.38,
+};
+
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 export function calculateDoseConcentration(event: DoseEvent, currentTime: number) {
@@ -64,7 +70,7 @@ export function calculateDoseConcentration(event: DoseEvent, currentTime: number
   if (elapsedMinutes >= duration) return 0;
 
   const doseScale = event.dose / Math.max(event.profile.defaultDose ?? 20, 1);
-  const peakLevel = clamp(doseScale * strength * 0.72, 0, 1.4);
+  const peakLevel = clamp(doseScale * strength * 0.52, 0, 1);
 
   if (elapsedMinutes <= onset) {
     return clamp((elapsedMinutes / Math.max(onset, 1)) * peakLevel * 0.65, 0, 1);
@@ -102,9 +108,10 @@ export function calculateCumulativeConcentration(doseEvents: DoseEvent[], curren
 }
 
 export function estimateFocusFromConcentration(concentration: number, baseline: number = 50) {
-  const optimal = 0.62;
-  const overstimulationPenalty = concentration > optimal ? (concentration - optimal) * 70 : 0;
-  return clamp(baseline + concentration * 58 - overstimulationPenalty, 0, 100);
+  const underTargetGain = Math.min(concentration, EFFECTIVE_RANGE.optimal) * 88;
+  const aboveTarget = Math.max(0, concentration - EFFECTIVE_RANGE.upper);
+  const overstimulationPenalty = aboveTarget * 85;
+  return clamp(baseline + underTargetGain - overstimulationPenalty, 0, 100);
 }
 
 export function estimateReboundRisk(concentration: number): 'none' | 'low' | 'medium' | 'high' {
