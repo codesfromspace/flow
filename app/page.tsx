@@ -54,6 +54,8 @@ interface ActivationDataPoint {
   timestamp: number;
 }
 
+type AppPage = 'overview' | 'log' | 'activation' | 'timeline';
+
 export default function Dashboard() {
   const { isInitialized, getMedicationProfiles } = useIndexedDB();
   const { widgetOrder, moveWidget } = useWidgetOrder();
@@ -67,6 +69,7 @@ export default function Dashboard() {
   const [timelineData, setTimelineData] = useState<ActivationDataPoint[]>([]);
   const [hydrationLevel] = useState<1 | 2 | 3 | 4 | 5>(3);
   const [isInfoOpen, setIsInfoOpen] = useState(false);
+  const [activePage, setActivePage] = useState<AppPage>('overview');
   const [userProfile, setUserProfile] = useState<UserProfile>({});
   const [effectiveRange, setEffectiveRange] = useState<EffectiveRange>(DEFAULT_EFFECTIVE_RANGE);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
@@ -222,6 +225,23 @@ export default function Dashboard() {
       return { time: log.timestamp.getTime(), type, label };
     });
 
+  const recentLogs = [...logs]
+    .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+    .slice(0, 8)
+    .map((log) => {
+      let label = 'Sleep';
+      if (log.logType === 'medication') label = `${log.data.dose}mg ${log.data.medicationName}`;
+      if (log.logType === 'mood') label = `Mood ${log.data.mood}/5 · Focus ${log.data.focus}/5`;
+      if (log.logType === 'focus') label = `Focus ${log.data.focus}/5`;
+      if (log.logType === 'deep_work') label = 'Deep work';
+      return {
+        id: log.id,
+        label,
+        type: log.logType,
+        time: log.timestamp.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+      };
+    });
+
   const renderWidget = (widgetId: string, index: number) => {
     const wrapperProps = {
       canMoveUp: index > 0,
@@ -287,47 +307,112 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen overflow-hidden bg-background">
       <Header onOpenInfo={() => setIsInfoOpen(true)} />
       <InfoModal isOpen={isInfoOpen} onClose={() => setIsInfoOpen(false)} logs={logs} medications={medications} onMedicationSaved={handleMedicationSaved} effectiveRange={effectiveRange} onEffectiveRangeSaved={handleEffectiveRangeSaved} />
 
-      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-7">
-        <div className="flex flex-col gap-2">
-          <h2 className="text-2xl font-semibold tracking-tight text-foreground">Today</h2>
-          <p className="text-sm font-medium text-muted">Medication activation, focus quality, and recovery signals in one local dashboard.</p>
+      <main className="mx-auto flex h-[calc(100vh-69px)] max-w-7xl flex-col gap-5 overflow-hidden px-4 py-6 sm:px-6 lg:px-8">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex flex-col gap-1">
+            <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+              {activePage === 'overview' && 'Overview'}
+              {activePage === 'log' && 'Log'}
+              {activePage === 'activation' && 'Activation'}
+              {activePage === 'timeline' && 'Timeline'}
+            </h2>
+            <p className="text-sm font-medium text-muted">
+              {activePage === 'overview' && 'A compact view of current cognitive state and recovery signals.'}
+              {activePage === 'log' && 'Record medication, mood, and focus without leaving the first viewport.'}
+              {activePage === 'activation' && 'Medication activation curve and calibration context.'}
+              {activePage === 'timeline' && 'Today’s logged events across the day.'}
+            </p>
+          </div>
+
+          <nav className="flex w-full gap-2 overflow-x-auto rounded-2xl border border-card-border/90 bg-white p-1 lg:w-auto">
+            {[
+              ['overview', 'Overview'],
+              ['log', 'Log'],
+              ['activation', 'Activation'],
+              ['timeline', 'Timeline'],
+            ].map(([page, label]) => (
+              <button
+                key={page}
+                type="button"
+                onClick={() => setActivePage(page as AppPage)}
+                className={`min-w-28 rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                  activePage === page
+                    ? 'bg-foreground text-white shadow-sm'
+                    : 'text-muted hover:bg-card-border/30 hover:text-foreground'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </nav>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <QuickLogForm onLog={handleLog} medications={medications.length > 0 ? medications : Object.values(MEDICATION_PRESETS)} />
-        </div>
+        <section className="min-h-0 flex-1 overflow-hidden">
+          {activePage === 'overview' ? (
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleWidgetDragEnd}>
+              <SortableContext items={widgetOrder} strategy={rectSortingStrategy}>
+                <div className="grid h-full grid-cols-1 gap-4 auto-rows-fr md:grid-cols-2 lg:grid-cols-4">
+                  {widgetOrder.slice(0, 6).map((widgetId, idx) => renderWidget(widgetId, idx))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          ) : null}
 
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleWidgetDragEnd}>
-          <SortableContext items={widgetOrder} strategy={rectSortingStrategy}>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 auto-rows-[minmax(220px,auto)] items-stretch">
-              {widgetOrder.slice(0, 6).map((widgetId, idx) => renderWidget(widgetId, idx))}
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2">
-                {widgetOrder.includes('activation-curve') ? renderWidget('activation-curve', widgetOrder.indexOf('activation-curve')) : null}
+          {activePage === 'log' ? (
+            <div className="grid h-full grid-cols-1 gap-4 lg:grid-cols-[420px_1fr]">
+              <QuickLogForm onLog={handleLog} medications={medications.length > 0 ? medications : Object.values(MEDICATION_PRESETS)} />
+              <div className="card-base min-h-0 p-5">
+                <div className="mb-4 flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">Recent logs</h3>
+                  <span className="text-sm font-medium text-muted">{recentLogs.length} items</span>
+                </div>
+                <div className="grid gap-2">
+                  {recentLogs.map((log) => (
+                    <div key={log.id} className="flex items-center justify-between rounded-xl border border-card-border/70 bg-card-border/10 px-4 py-3">
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">{log.label}</p>
+                        <p className="text-xs font-medium capitalize text-muted">{log.type.replace('_', ' ')}</p>
+                      </div>
+                      <span className="text-sm font-semibold tabular-nums text-muted">{log.time}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="lg:col-span-1">
+            </div>
+          ) : null}
+
+          {activePage === 'activation' ? (
+            <div className="grid h-full grid-cols-1 gap-4 lg:grid-cols-[1fr_360px]">
+              <div className="min-h-0">
+                {timelineData.length > 0 ? (
+                  <ActivationCurve data={timelineData} medications={medications.map((m) => ({ name: m.name, color: '#0e9fa8', doseTime: 0 }))} currentTime={currentTime} effectiveRange={effectiveRange} />
+                ) : null}
+              </div>
+              <div className="min-h-0 overflow-hidden">
                 <PharmacologyInfo />
               </div>
             </div>
+          ) : null}
 
-            {widgetOrder.includes('daily-timeline') ? (
-              <div className="grid grid-cols-1 gap-6">
-                {renderWidget('daily-timeline', widgetOrder.indexOf('daily-timeline'))}
-              </div>
-            ) : null}
-          </SortableContext>
-        </DndContext>
-
-        <div className="text-center text-muted text-xs pt-8 border-t border-card-border/80">
-          <p>Flow • Local-first cognitive tracking • v0.1.0</p>
-          <p className="mt-2">Data stored locally. No external synchronization.</p>
-        </div>
+          {activePage === 'timeline' ? (
+            <div className="h-full">
+              {todayEvents.length > 0 ? (
+                <DailyTimeline events={todayEvents} currentTime={currentTime} dayStart={dayStart} dayEnd={dayEnd} />
+              ) : (
+                <div className="card-base grid h-full place-items-center p-8 text-center">
+                  <div>
+                    <h3 className="text-lg font-semibold">No events today</h3>
+                    <p className="mt-2 text-sm font-medium text-muted">Log a dose, mood, or focus entry to populate the timeline.</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : null}
+        </section>
       </main>
     </div>
   );

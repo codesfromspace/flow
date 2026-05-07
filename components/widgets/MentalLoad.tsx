@@ -15,29 +15,11 @@ export default function MentalLoad({ load, capacity }: MentalLoadProps) {
     return 'text-status-green';
   };
 
-  const getRecommendation = () => {
-    if (overloaded) {
-      return {
-        title: '🔴 Přetížení',
-        message: 'Tvá kognitivní kapacita je překročena. Výkon bude klesat.',
-        tips: ['Deleguj nebo odlož úkoly', 'Rozděl velké projekty', 'Přestávky každých 25 minut', 'Ne všechno musí být NYNÍ'],
-      };
-    }
-    if (load > capacity * 0.8) {
-      return {
-        title: '🟡 Vysoké zatížení',
-        message: 'Blížíš se k limitům. Buď opatrný.',
-        tips: ['Plánuj více si času', 'Vyhni se multitaskingu', 'Pamatuj na přestávky', 'Komunikuj, když potřebuješ pomoc'],
-      };
-    }
-    return {
-      title: '✅ Zdravé zatížení',
-      message: 'Tvá kapacita je zdravě využitá. Dobrá rovnováha.',
-      tips: ['Pokračuj v tom, co děláš', 'Máš prostor pro nové věci', 'Optimální pro učení a kreativitu'],
-    };
+  const getSummary = () => {
+    if (overloaded) return 'Over capacity. Reduce workload or split tasks.';
+    if (load > capacity * 0.8) return 'Near capacity. Avoid multitasking.';
+    return 'Within capacity. Good balance for focused work.';
   };
-
-  const rec = getRecommendation();
 
   return (
     <div className="card-base h-full min-h-[220px] p-4 flex flex-col justify-between gap-3">
@@ -55,24 +37,7 @@ export default function MentalLoad({ load, capacity }: MentalLoadProps) {
         </div>
       </div>
 
-      <div className="bg-card-border/10 p-2 rounded space-y-2 border border-card-border/20">
-        <p className="text-xs font-medium">{rec.title}</p>
-        <p className="text-xs text-muted leading-relaxed">{rec.message}</p>
-        <ul className="text-xs text-muted space-y-1">
-          {rec.tips.map((tip, i) => (
-            <li key={i} className="flex gap-2">
-              <span>•</span>
-              <span>{tip}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <div className="border-t border-card-border/20 pt-2">
-        <p className="text-xs text-muted">
-          <strong>ℹ️ Co to je:</strong> Mental load je kombinace pracovního vytížení a tvé schopnosti jej zvládnout. Ovlivňuje ji koncentrace medicíny a kvalita spánku.
-        </p>
-      </div>
+      <p className="rounded-xl border border-card-border/60 bg-card-border/10 p-3 text-xs font-medium leading-relaxed text-muted">{getSummary()}</p>
     </div>
   );
 }

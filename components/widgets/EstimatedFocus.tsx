@@ -30,13 +30,9 @@ export default function EstimatedFocus({ percentage, trend }: EstimatedFocusProp
   };
 
   const getTipBasedOnTrend = () => {
-    if (trend === 'up') {
-      return 'Tvůj fokus se zlepšuje. Pokračuj v tom, co děláš!';
-    }
-    if (trend === 'down') {
-      return 'Tvůj fokus se zhoršuje. Zvažuj přestávku, vodu, nebo fyzickou aktivitu.';
-    }
-    return 'Tvůj fokus je stabilní. Dobrá pozice pro kontinuální práci.';
+    if (trend === 'up') return 'Focus is improving.';
+    if (trend === 'down') return 'Consider a break or water.';
+    return 'Stable window for continuous work.';
   };
 
   return (
@@ -59,11 +55,6 @@ export default function EstimatedFocus({ percentage, trend }: EstimatedFocusProp
         <p className="text-xs text-muted leading-relaxed">{getTipBasedOnTrend()}</p>
       </div>
 
-      <div className="border-t border-card-border/20 pt-2">
-        <p className="text-xs text-muted">
-          <strong>ℹ️ Co to je:</strong> Kvalita fokus je kombinace farmakologických efektů a spánkového tlaku. Ideální je 70-85% - vyšší už není výhodné.
-        </p>
-      </div>
     </div>
   );
 }
