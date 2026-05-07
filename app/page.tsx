@@ -55,7 +55,7 @@ interface ActivationDataPoint {
   timestamp: number;
 }
 
-type AppPage = 'overview' | 'log' | 'activation' | 'timeline';
+type AppPage = 'wake' | 'doses' | 'graph' | 'overview';
 
 interface OverviewBriefProps {
   profileName: string;
@@ -119,7 +119,7 @@ function OverviewBrief({
         </div>
         <div className="rounded-xl border border-card-border/70 bg-card-border/10 p-3">
           <p className="text-xs font-semibold uppercase text-muted">Range</p>
-          <p className="mt-1 text-xl font-semibold text-foreground">{effectiveRange.lower}-{effectiveRange.upper}%</p>
+          <p className="mt-1 text-xl font-semibold text-foreground">{Math.round(effectiveRange.lower * 100)}-{Math.round(effectiveRange.upper * 100)}%</p>
           <p className="text-xs font-medium text-muted">useful</p>
         </div>
       </div>
@@ -143,8 +143,9 @@ export default function Dashboard() {
   const [timelineData, setTimelineData] = useState<ActivationDataPoint[]>([]);
   const [hydrationLevel] = useState<1 | 2 | 3 | 4 | 5>(3);
   const [isInfoOpen, setIsInfoOpen] = useState(false);
-  const [activePage, setActivePage] = useState<AppPage>('overview');
+  const [activePage, setActivePage] = useState<AppPage>('wake');
   const [userProfile, setUserProfile] = useState<UserProfile>({});
+  const [wakeTimeInput, setWakeTimeInput] = useState('');
   const [effectiveRange, setEffectiveRange] = useState<EffectiveRange>(DEFAULT_EFFECTIVE_RANGE);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
@@ -197,7 +198,10 @@ export default function Dashboard() {
 
     getSetting<UserProfile>('userProfile')
       .then((profile) => {
-        if (profile) setUserProfile(profile);
+        if (profile) {
+          setUserProfile(profile);
+          if (profile.wakeUpTime) setWakeTimeInput(profile.wakeUpTime);
+        }
       })
       .catch((err) => console.error('Failed to load user profile:', err));
 
@@ -275,6 +279,39 @@ export default function Dashboard() {
     setLogs((currentLogs) => [...currentLogs, log].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime()));
   };
 
+  const handleSaveWakeTime = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!wakeTimeInput) return;
+
+    const todayStart = new Date(currentTime || Date.now());
+    todayStart.setHours(0, 0, 0, 0);
+    const [hours, minutes] = wakeTimeInput.split(':').map(Number);
+    const wokeUpAt = new Date(todayStart);
+    wokeUpAt.setHours(hours, minutes, 0, 0);
+
+    const nextProfile = { ...userProfile, wakeUpTime: wakeTimeInput };
+    const sleepLog: CognitiveLog = {
+      id: uuidv4(),
+      timestamp: wokeUpAt,
+      logType: 'sleep',
+      data: {
+        date: todayStart.getTime(),
+        wokeUpAt: wokeUpAt.getTime(),
+        duration: 8,
+        quality: 3,
+      },
+    };
+
+    await setSetting('userProfile', nextProfile);
+    await addLog(sleepLog);
+    setUserProfile(nextProfile);
+    setLogs((currentLogs) => {
+      const withoutTodayWake = currentLogs.filter((log) => !(log.logType === 'sleep' && log.data.date === todayStart.getTime()));
+      return [...withoutTodayWake, sleepLog].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+    });
+    setActivePage('doses');
+  };
+
   const handleCreateProfile = async (event: React.FormEvent) => {
     event.preventDefault();
     const displayName = profileNameInput.trim();
@@ -330,6 +367,7 @@ export default function Dashboard() {
     });
 
   const todayLogCount = todayEvents.length;
+  const hasWakeToday = logs.some((log) => log.logType === 'sleep' && log.data.date === dayStart);
 
   const recentLogs = [...logs]
     .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
@@ -432,7 +470,8 @@ export default function Dashboard() {
       <div className="grid min-h-screen place-items-center bg-background px-4">
         <form onSubmit={handleCreateProfile} className="card-base w-full max-w-md space-y-5 p-6">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Create Flow profile</h1>
+            <p className="text-label mb-2">Step 1</p>
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Choose user</h1>
             <p className="mt-2 text-sm font-medium leading-relaxed text-muted">
               No password for now. The profile and logs stay locally in this browser, so restarting the server will not clear your data.
             </p>
@@ -464,25 +503,25 @@ export default function Dashboard() {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="flex flex-col gap-1">
             <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+              {activePage === 'wake' && 'Wake time'}
+              {activePage === 'doses' && 'Doses'}
+              {activePage === 'graph' && 'Graph'}
               {activePage === 'overview' && 'Overview'}
-              {activePage === 'log' && 'Log'}
-              {activePage === 'activation' && 'Activation'}
-              {activePage === 'timeline' && 'Timeline'}
             </h2>
             <p className="text-sm font-medium text-muted">
+              {activePage === 'wake' && 'Start the day by anchoring sleep pressure to when you actually got up.'}
+              {activePage === 'doses' && 'Enter today’s dose timing first; the graph updates from those real entries.'}
+              {activePage === 'graph' && 'Read the activation curve, useful range, and calibration guidance together.'}
               {activePage === 'overview' && 'A compact view of current cognitive state and recovery signals.'}
-              {activePage === 'log' && 'Record medication, mood, and focus without leaving the first viewport.'}
-              {activePage === 'activation' && 'Medication activation curve and calibration context.'}
-              {activePage === 'timeline' && 'Today’s logged events across the day.'}
             </p>
           </div>
 
           <nav className="flex w-full gap-2 overflow-x-auto rounded-2xl border border-card-border/90 bg-white p-1 lg:w-auto">
             {[
+              ['wake', hasWakeToday ? 'Wake ✓' : 'Wake'],
+              ['doses', 'Doses'],
+              ['graph', 'Graph'],
               ['overview', 'Overview'],
-              ['log', 'Log'],
-              ['activation', 'Activation'],
-              ['timeline', 'Timeline'],
             ].map(([page, label]) => (
               <button
                 key={page}
@@ -501,6 +540,53 @@ export default function Dashboard() {
         </div>
 
         <section className="min-h-0 flex-1 overflow-hidden">
+          {activePage === 'wake' ? (
+            <div className="grid h-full grid-cols-1 gap-4 lg:grid-cols-[420px_1fr]">
+              <form onSubmit={handleSaveWakeTime} className="card-elevated flex h-full flex-col justify-between p-6">
+                <div>
+                  <p className="text-label mb-2">Step 2</p>
+                  <h3 className="text-2xl font-semibold tracking-tight text-foreground">When did you wake up?</h3>
+                  <p className="mt-3 text-sm font-medium leading-relaxed text-muted">
+                    This sets the baseline for sleep pressure. Flow uses it when estimating whether poor focus is more likely medication timing or accumulated fatigue.
+                  </p>
+                  <label className="text-label mb-2 mt-6 block">Wake time</label>
+                  <input
+                    type="time"
+                    value={wakeTimeInput}
+                    onChange={(event) => setWakeTimeInput(event.target.value)}
+                    className="input-base text-lg"
+                    autoFocus
+                  />
+                </div>
+                <button type="submit" disabled={!wakeTimeInput} className="btn-primary w-full disabled:opacity-50">
+                  Continue to doses
+                </button>
+              </form>
+
+              <div className="card-base grid h-full place-items-center p-8">
+                <div className="max-w-xl">
+                  <p className="text-label mb-2">Why this comes first</p>
+                  <h3 className="text-3xl font-semibold tracking-tight text-foreground">The dose curve is only half the picture.</h3>
+                  <p className="mt-4 text-sm font-medium leading-relaxed text-muted">
+                    A stimulant can be in a useful range while sleep pressure is still making work feel brittle. Logging wake time keeps the app from interpreting every low-focus state as a dosing problem.
+                  </p>
+                  <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                    {[
+                      ['Sleep pressure', `${Math.round(sleepPressure)}%`],
+                      ['Saved logs', String(logs.length)],
+                      ['Useful range', `${Math.round(effectiveRange.lower * 100)}-${Math.round(effectiveRange.upper * 100)}%`],
+                    ].map(([label, value]) => (
+                      <div key={label} className="rounded-xl border border-card-border/70 bg-card-border/10 p-4">
+                        <p className="text-xs font-semibold uppercase text-muted">{label}</p>
+                        <p className="mt-1 text-xl font-semibold text-foreground">{value}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
           {activePage === 'overview' ? (
             <div className="grid h-full grid-rows-[auto_minmax(0,1fr)] gap-4">
               <OverviewBrief
@@ -510,8 +596,8 @@ export default function Dashboard() {
                 lastLogLabel={lastLogLabel}
                 activeMedicationNames={activeMedicationNames}
                 effectiveRange={effectiveRange}
-                onOpenLog={() => setActivePage('log')}
-                onOpenActivation={() => setActivePage('activation')}
+                onOpenLog={() => setActivePage('doses')}
+                onOpenActivation={() => setActivePage('graph')}
               />
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleWidgetDragEnd}>
                 <SortableContext items={widgetOrder} strategy={rectSortingStrategy}>
@@ -523,7 +609,7 @@ export default function Dashboard() {
             </div>
           ) : null}
 
-          {activePage === 'log' ? (
+          {activePage === 'doses' ? (
             <div className="grid h-full grid-cols-1 gap-4 lg:grid-cols-[420px_1fr]">
               <QuickLogForm onLog={handleLog} medications={medications.length > 0 ? medications : Object.values(MEDICATION_PRESETS)} />
               <div className="card-base min-h-0 p-5">
@@ -546,7 +632,7 @@ export default function Dashboard() {
             </div>
           ) : null}
 
-          {activePage === 'activation' ? (
+          {activePage === 'graph' ? (
             <div className="grid h-full grid-cols-1 gap-4 lg:grid-cols-[1fr_360px]">
               <div className="min-h-0">
                 {timelineData.length > 0 ? (
@@ -559,20 +645,6 @@ export default function Dashboard() {
             </div>
           ) : null}
 
-          {activePage === 'timeline' ? (
-            <div className="h-full">
-              {todayEvents.length > 0 ? (
-                <DailyTimeline events={todayEvents} currentTime={currentTime} dayStart={dayStart} dayEnd={dayEnd} />
-              ) : (
-                <div className="card-base grid h-full place-items-center p-8 text-center">
-                  <div>
-                    <h3 className="text-lg font-semibold">No events today</h3>
-                    <p className="mt-2 text-sm font-medium text-muted">Log a dose, mood, or focus entry to populate the timeline.</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : null}
         </section>
       </main>
     </div>
