@@ -42,7 +42,7 @@ export default function Header({ onOpenInfo }: HeaderProps) {
           <div className="flex items-center gap-4">
             <div className="flex flex-col gap-0.5">
               <h1 className="text-title font-medium tracking-tight text-accent-cyan">
-                Synapse Flow
+                Flow
               </h1>
               <p className="text-label text-muted">{currentDate}</p>
             </div>

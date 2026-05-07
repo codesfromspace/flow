@@ -74,7 +74,7 @@ export default function InfoModal({ isOpen, onClose, logs, medications, onMedica
     const moodLogs = logs.filter(l => l.logType === 'mood');
     const sleepLogs = logs.filter(l => l.logType === 'sleep');
 
-    const markdown = `# Synapse Flow Data Export
+    const markdown = `# Flow Data Export
 **Datum exportu:** ${date}
 
 ## Přehled dat
@@ -93,7 +93,7 @@ ${moodLogs.map(log => `- Nálada: ${log.data.mood}/5, Fokus: ${log.data.focus}/5
 ${sleepLogs.map(log => `- Kvalita: ${log.data.quality}/5, Trvání: ${log.data.duration.toFixed(1)}h - ${new Date(log.data.date).toLocaleString('cs-CZ')}`).join('\n')}
 
 ---
-*Vygenerováno aplikací Synapse Flow - Local-first cognitive tracking*`;
+*Vygenerováno aplikací Flow - Local-first cognitive tracking*`;
 
     return markdown;
   };
@@ -109,7 +109,7 @@ ${sleepLogs.map(log => `- Kvalita: ${log.data.quality}/5, Trvání: ${log.data.d
       // Vytvoř download soubor
       const element = document.createElement('a');
       element.setAttribute('href', 'data:text/markdown;charset=utf-8,' + encodeURIComponent(markdown));
-      element.setAttribute('download', `synapse-flow-${new Date().toISOString().split('T')[0]}.md`);
+      element.setAttribute('download', `flow-${new Date().toISOString().split('T')[0]}.md`);
       element.style.display = 'none';
       document.body.appendChild(element);
       element.click();
@@ -197,7 +197,7 @@ ${sleepLogs.map(log => `- Kvalita: ${log.data.quality}/5, Trvání: ${log.data.d
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="card-base max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center p-6 border-b border-card-border/30">
-          <h2 className="text-title font-medium">Synapse Flow</h2>
+          <h2 className="text-title font-medium">Flow</h2>
           <button
             onClick={onClose}
             className="text-2xl text-muted hover:text-foreground transition"
@@ -226,7 +226,7 @@ ${sleepLogs.map(log => `- Kvalita: ${log.data.quality}/5, Trvání: ${log.data.d
           {activeTab === 'info' && (
             <div className="space-y-4">
               <div>
-                <h3 className="text-lg font-medium mb-2">O Synapse Flow</h3>
+                <h3 className="text-lg font-medium mb-2">O Flow</h3>
                 <p className="text-sm text-muted mb-4">
                   Osobní systém pro sledování kognitivního stavu a dynamiky psychostimulantů.
                   Veškerá data se ukládají lokálně - žádná synchronizace s externími servery.
@@ -507,7 +507,7 @@ ${sleepLogs.map(log => `- Kvalita: ${log.data.quality}/5, Trvání: ${log.data.d
               <div className="border-t border-card-border/30 pt-4">
                 <h4 className="font-medium text-sm mb-2">Info</h4>
                 <p className="text-xs text-muted">
-                  <strong>Synapse Flow v0.1.0</strong><br/>
+                  <strong>Flow v0.1.0</strong><br/>
                   Local-first cognitive tracking<br/>
                   Všechna data se ukládají lokálně v IndexedDB
                 </p>

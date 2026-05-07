@@ -314,7 +314,7 @@ export default function Dashboard() {
         </DndContext>
 
         <div className="text-center text-muted text-xs pt-8 border-t border-card-border/30">
-          <p>Synapse Flow • Local-first cognitive tracking • v0.1.0</p>
+          <p>Flow • Local-first cognitive tracking • v0.1.0</p>
           <p className="mt-2">Data stored locally. No external synchronization.</p>
         </div>
       </main>

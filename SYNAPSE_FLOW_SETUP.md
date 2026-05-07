@@ -1,6 +1,6 @@
-# Synapse Flow - Project Setup Complete ✨
+# Flow - Project Setup Complete ✨
 
-Synapse Flow is a **cognitive state visualization system** for tracking psychostimulant effects, focus levels, and mental energy dynamics. It's designed to feel calm, scientific, and minimalist—like a personal operating system for cognition.
+Flow is a **cognitive state visualization system** for tracking psychostimulant effects, focus levels, and mental energy dynamics. It's designed to feel calm, scientific, and minimalist—like a personal operating system for cognition.
 
 ## ✅ What's Been Completed
 
@@ -43,7 +43,7 @@ Synapse Flow is a **cognitive state visualization system** for tracking psychost
 ## 📁 Project Structure
 
 ```
-synapse-flow/
+flow/
 ├── app/
 │   ├── layout.tsx              ✅ Root layout
 │   ├── page.tsx                ✅ Dashboard (main page)
@@ -81,7 +81,7 @@ Legend: ✅ Complete | ⏳ Ready to use | ❌ Not started
 
 ### 1. Install & Run
 ```bash
-cd "Documents/claude code/synapse-flow"
+cd "Documents/claude code/flow"
 npm install  # Already done
 npm run dev  # Start dev server on http://localhost:3000
 ```
@@ -284,6 +284,6 @@ All the following files have been created and are ready to use:
 
 ---
 
-**Synapse Flow** is now ready to use! Start the dev server and explore your cognitive state visualization system. All data stays local to your device—you own your data completely.
+**Flow** is now ready to use! Start the dev server and explore your cognitive state visualization system. All data stays local to your device—you own your data completely.
 
 Happy tracking! 🧠✨

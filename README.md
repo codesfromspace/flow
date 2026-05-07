@@ -1,4 +1,4 @@
-# Synapse Flow
+# Flow
 
 Local-first cognitive tracking dashboard for logging medication doses, focus, mood, sleep pressure, hydration context, and daily activation trends.
 
@@ -30,7 +30,7 @@ The project should live in a path without a literal backslash character. A direc
 
 ## Data And Privacy
 
-Synapse Flow is local-first. It does not sync data to an external service. Clearing browser storage or deleting IndexedDB data removes the app's stored logs and settings.
+Flow is local-first. It does not sync data to an external service. Clearing browser storage or deleting IndexedDB data removes the app's stored logs and settings.
 
 ## Medical Disclaimer
 
