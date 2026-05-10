@@ -56,6 +56,7 @@ interface ActivationDataPoint {
 }
 
 type AppPage = 'wake' | 'doses' | 'graph' | 'overview';
+type GraphRange = 'day' | 'week';
 
 interface OverviewBriefProps {
   profileName: string;
@@ -144,6 +145,7 @@ export default function Dashboard() {
   const [hydrationLevel] = useState<1 | 2 | 3 | 4 | 5>(3);
   const [isInfoOpen, setIsInfoOpen] = useState(false);
   const [activePage, setActivePage] = useState<AppPage>('wake');
+  const [graphRange, setGraphRange] = useState<GraphRange>('day');
   const [userProfile, setUserProfile] = useState<UserProfile>({});
   const [wakeTimeInput, setWakeTimeInput] = useState('');
   const [effectiveRange, setEffectiveRange] = useState<EffectiveRange>(DEFAULT_EFFECTIVE_RANGE);
@@ -218,9 +220,8 @@ export default function Dashboard() {
       setCurrentTime(now);
 
       const medicationById = new Map(medications.map((medication) => [medication.id, medication]));
-      const recentDoses = logs
+      const doseEvents = logs
         .filter((log): log is MedicationLog => log.logType === 'medication')
-        .filter((log) => now - log.timestamp.getTime() < 24 * 60 * 60 * 1000)
         .flatMap((log) => {
           const profile = medicationById.get(log.data.medicationId) ?? MEDICATION_PRESETS[log.data.medicationId];
           if (!profile) return [];
@@ -231,6 +232,7 @@ export default function Dashboard() {
             profile,
           }];
         });
+      const recentDoses = doseEvents.filter((dose) => now - dose.timestamp < 24 * 60 * 60 * 1000);
 
       const { total: concentration, byMedication } = calculateCumulativeConcentration(recentDoses, now);
       const focus = Math.round(estimateFocusFromConcentration(concentration, 50, effectiveRange));
@@ -264,14 +266,15 @@ export default function Dashboard() {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const dayStart = today.getTime();
-      const dayEnd = dayStart + 24 * 60 * 60 * 1000;
-      setTimelineData(generateTimelineData(dayStart, dayEnd, recentDoses.filter((dose) => dose.timestamp >= dayStart), effectiveRange));
+      const rangeStart = graphRange === 'week' ? dayStart - 6 * 24 * 60 * 60 * 1000 : dayStart;
+      const rangeEnd = dayStart + 24 * 60 * 60 * 1000;
+      setTimelineData(generateTimelineData(rangeStart, rangeEnd, doseEvents.filter((dose) => dose.timestamp >= rangeStart), effectiveRange));
     };
 
     updateState();
     const interval = setInterval(updateState, 60000);
     return () => clearInterval(interval);
-  }, [logs, medications, userProfile.wakeUpTime, effectiveRange]);
+  }, [logs, medications, userProfile.wakeUpTime, effectiveRange, graphRange]);
 
   const handleLog = async (log: CognitiveLog) => {
     if (!localProfile) return;
@@ -654,7 +657,29 @@ export default function Dashboard() {
 
           {activePage === 'graph' ? (
             <div className="grid h-full grid-cols-1 gap-4 lg:grid-cols-[1fr_360px]">
-              <div className="min-h-0">
+              <div className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] gap-3">
+                <div className="flex items-center justify-between rounded-xl border border-card-border/90 bg-white p-2">
+                  <p className="px-2 text-sm font-semibold text-muted">Graph range</p>
+                  <div className="flex gap-1">
+                    {[
+                      ['day', 'Day'],
+                      ['week', 'Week'],
+                    ].map(([range, label]) => (
+                      <button
+                        key={range}
+                        type="button"
+                        onClick={() => setGraphRange(range as GraphRange)}
+                        className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${
+                          graphRange === range
+                            ? 'bg-foreground text-white shadow-sm'
+                            : 'text-muted hover:bg-card-border/30 hover:text-foreground'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 {timelineData.length > 0 ? (
                   <ActivationCurve data={timelineData} medications={medications.map((m) => ({ name: m.name, color: '#0e9fa8', doseTime: 0 }))} currentTime={currentTime} effectiveRange={effectiveRange} />
                 ) : null}

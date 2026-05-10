@@ -20,6 +20,10 @@ interface ActivationCurveProps {
 
 export default function ActivationCurve({ data, medications, currentTime, effectiveRange }: ActivationCurveProps) {
   const range = normalizeEffectiveRange(effectiveRange);
+  const maxConcentration = Math.max(...data.map((point) => point.concentration), range.upper, 1);
+  const yMax = Math.min(1.25, Math.max(1.1, Math.ceil(maxConcentration * 10 + 1) / 10));
+  const yTicks = yMax > 1 ? [0, 0.25, 0.5, 0.75, 1, yMax] : [0, 0.25, 0.5, 0.75, 1];
+
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload[0]) {
       return (
@@ -109,8 +113,8 @@ export default function ActivationCurve({ data, medications, currentTime, effect
             tick={{ fill: 'rgb(100, 116, 139)', fontSize: 12 }}
             axisLine={false}
             tickLine={false}
-            domain={[0, 1]}
-            ticks={[0, 0.25, 0.5, 0.75, 1]}
+            domain={[0, yMax]}
+            ticks={yTicks}
             tickFormatter={(value) => `${Math.round(value * 100)}%`}
             label={{ value: 'Relative activation', angle: -90, position: 'insideLeft' }}
           />
