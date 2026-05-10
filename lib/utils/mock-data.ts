@@ -42,17 +42,43 @@ export function generateMockData(): {
   return { logs, medications };
 }
 
-export function generateTimelineData(startTime: number, endTime: number, doses: DoseEvent[], effectiveRange?: EffectiveRange) {
+export function generateTimelineData(
+  startTime: number, 
+  endTime: number, 
+  doses: DoseEvent[], 
+  effectiveRange?: EffectiveRange,
+  intervalMs?: number
+) {
   const points = [];
-  const interval = 15 * 60 * 1000;
+  const interval = intervalMs ?? (15 * 60 * 1000);
+  const showDate = (endTime - startTime) > (24 * 60 * 60 * 1000 + 1000); // More than 24h
 
+  const times = new Set<number>();
   for (let time = startTime; time <= endTime; time += interval) {
+    times.add(time);
+  }
+  for (const dose of doses) {
+    times.add(dose.timestamp);
+  }
+
+  const sortedTimes = Array.from(times).sort((a, b) => a - b);
+
+  for (const time of sortedTimes) {
     const { total: totalConcentration } = calculateCumulativeConcentration(doses, time);
-    const timeStr = new Date(time).toLocaleTimeString('cs-CZ', {
+    const dateObj = new Date(time);
+    
+    let timeStr = dateObj.toLocaleTimeString('cs-CZ', {
       hour: '2-digit',
       minute: '2-digit',
-      hour12: false,
     });
+    
+    if (showDate) {
+      const dateStr = dateObj.toLocaleDateString('cs-CZ', {
+        day: 'numeric',
+        month: 'numeric',
+      });
+      timeStr = `${dateStr} ${timeStr}`;
+    }
 
     const focus = Math.round(estimateFocusFromConcentration(totalConcentration, 50, effectiveRange));
     points.push({

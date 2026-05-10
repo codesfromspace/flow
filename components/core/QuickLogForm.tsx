@@ -9,7 +9,7 @@ interface QuickLogFormProps {
   medications: MedicationProfile[];
 }
 
-type LogTab = 'dose' | 'mood' | 'focus';
+type LogTab = 'dose' | 'mood' | 'focus' | 'sleep';
 type Rating = 1 | 2 | 3 | 4 | 5;
 
 export default function QuickLogForm({ onLog, medications }: QuickLogFormProps) {
@@ -43,9 +43,15 @@ export default function QuickLogForm({ onLog, medications }: QuickLogFormProps) 
   // Focus form state
   const [focusLevel, setFocusLevel] = useState<Rating>(3);
   const [clarity, setClarity] = useState<Rating>(3);
+
+  // Sleep form state
+  const [sleepTimeMode, setSleepTimeMode] = useState<'now' | 'custom'>('now');
+  const [customWakeAt, setCustomWakeAt] = useState('');
+  const [sleepQuality, setSleepQuality] = useState<Rating>(3);
+  const [sleepDuration, setSleepDuration] = useState('8');
   const selectedMedicationId = selectedMed || medications[0]?.id || '';
 
-  const handleLogDose = async (e: React.FormEvent) => {
+  const handleLogDose = async (e: React.FormEvent | React.MouseEvent, keepState = false) => {
     e.preventDefault();
     setLoading(true);
 
@@ -74,9 +80,11 @@ export default function QuickLogForm({ onLog, medications }: QuickLogFormProps) 
 
     try {
       await onLog(log);
-      setDose(String(med.defaultDose ?? parsedDose));
-      setDoseTimeMode('now');
-      setCustomTakenAt('');
+      if (!keepState) {
+        setDose(String(med.defaultDose ?? parsedDose));
+        setDoseTimeMode('now');
+        setCustomTakenAt('');
+      }
     } catch (error) {
       console.error('Error logging dose:', error);
     } finally {
@@ -90,10 +98,16 @@ export default function QuickLogForm({ onLog, medications }: QuickLogFormProps) 
     if (doseTimeMode === '30') return Date.now() - 30 * 60 * 1000;
     if (!customTakenAt) return null;
 
-    const [hours, minutes] = customTakenAt.split(':').map(Number);
-    const date = new Date();
-    date.setHours(hours, minutes, 0, 0);
-    return date.getTime();
+    return new Date(customTakenAt).getTime();
+  };
+
+  const handleTimeModeChange = (mode: typeof doseTimeMode) => {
+    setDoseTimeMode(mode);
+    if (mode === 'custom' && !customTakenAt) {
+      const now = new Date();
+      now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+      setCustomTakenAt(now.toISOString().slice(0, 16));
+    }
   };
 
   const handleLogMood = async (e: React.FormEvent) => {
@@ -151,6 +165,56 @@ export default function QuickLogForm({ onLog, medications }: QuickLogFormProps) 
     }
   };
 
+  const getWakeAt = () => {
+    if (sleepTimeMode === 'now') return Date.now();
+    if (!customWakeAt) return null;
+    return new Date(customWakeAt).getTime();
+  };
+
+  const handleSleepTimeModeChange = (mode: typeof sleepTimeMode) => {
+    setSleepTimeMode(mode);
+    if (mode === 'custom' && !customWakeAt) {
+      const now = new Date();
+      now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+      setCustomWakeAt(now.toISOString().slice(0, 16));
+    }
+  };
+
+  const handleLogSleep = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    const wakeAt = getWakeAt();
+    if (!wakeAt) {
+      setLoading(false);
+      return;
+    }
+
+    const log: CognitiveLog = {
+      id: uuidv4(),
+      timestamp: new Date(wakeAt),
+      logType: 'sleep',
+      data: {
+        date: new Date(wakeAt).setHours(0, 0, 0, 0),
+        wokeUpAt: wakeAt,
+        duration: Number(sleepDuration),
+        quality: sleepQuality,
+      },
+    };
+
+    try {
+      await onLog(log);
+      setSleepTimeMode('now');
+      setCustomWakeAt('');
+      setSleepQuality(3);
+      setSleepDuration('8');
+    } catch (error) {
+      console.error('Error logging sleep:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const SliderInput = ({
     label,
     value,
@@ -186,7 +250,7 @@ export default function QuickLogForm({ onLog, medications }: QuickLogFormProps) 
     <div className="card-base p-4 border border-card-border/90">
       {/* Tabs */}
       <div className="flex gap-1 mb-4">
-        {(['dose', 'mood', 'focus'] as const).map((tab) => (
+        {(['dose', 'mood', 'focus', 'sleep'] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -196,7 +260,7 @@ export default function QuickLogForm({ onLog, medications }: QuickLogFormProps) 
                 : 'bg-card-border/20 text-muted hover:bg-card-border/30'
             }`}
           >
-            {tab === 'dose' ? 'Dose' : tab === 'mood' ? 'Mood' : 'Focus'}
+            {tab === 'dose' ? 'Dose' : tab === 'mood' ? 'Mood' : tab === 'focus' ? 'Focus' : 'Sleep'}
           </button>
         ))}
       </div>
@@ -243,7 +307,7 @@ export default function QuickLogForm({ onLog, medications }: QuickLogFormProps) 
                 <button
                   type="button"
                   key={value}
-                  onClick={() => setDoseTimeMode(value as typeof doseTimeMode)}
+                  onClick={() => handleTimeModeChange(value as typeof doseTimeMode)}
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition ${
                     doseTimeMode === value
                       ? 'bg-accent-cyan/20 text-accent-cyan'
@@ -256,7 +320,7 @@ export default function QuickLogForm({ onLog, medications }: QuickLogFormProps) 
             </div>
             {doseTimeMode === 'custom' && (
               <input
-                type="time"
+                type="datetime-local"
                 value={customTakenAt}
                 onChange={(e) => setCustomTakenAt(e.target.value)}
                 className="input-base mt-3"
@@ -264,13 +328,23 @@ export default function QuickLogForm({ onLog, medications }: QuickLogFormProps) 
             )}
           </div>
 
-          <button
-            type="submit"
-            disabled={loading || !selectedMedicationId || Number(dose) <= 0 || (doseTimeMode === 'custom' && !customTakenAt)}
-            className="w-full btn-primary disabled:opacity-50"
-          >
-            {loading ? 'Logging...' : 'Log Dose'}
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              disabled={loading || !selectedMedicationId || Number(dose) <= 0 || (doseTimeMode === 'custom' && !customTakenAt)}
+              className="w-full btn-primary disabled:opacity-50"
+            >
+              {loading ? '...' : 'Log Dose'}
+            </button>
+            <button
+              type="button"
+              disabled={loading || !selectedMedicationId || Number(dose) <= 0 || (doseTimeMode === 'custom' && !customTakenAt)}
+              onClick={(e) => handleLogDose(e, true)}
+              className="w-full rounded-lg border border-accent-cyan/30 bg-accent-cyan/10 font-semibold text-accent-cyan transition hover:bg-accent-cyan/20 disabled:opacity-50"
+            >
+              {loading ? '...' : '+ Batch (Keep open)'}
+            </button>
+          </div>
         </form>
       )}
 
@@ -303,6 +377,65 @@ export default function QuickLogForm({ onLog, medications }: QuickLogFormProps) 
             className="w-full btn-primary disabled:opacity-50"
           >
             {loading ? 'Logging...' : 'Log Focus'}
+          </button>
+        </form>
+      )}
+
+      {/* Sleep Tab */}
+      {activeTab === 'sleep' && (
+        <form onSubmit={handleLogSleep} className="space-y-4">
+          <div>
+            <label className="text-label mb-2 block">Woke up at</label>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                ['now', 'Now'],
+                ['custom', 'Custom Date/Time'],
+              ].map(([value, label]) => (
+                <button
+                  type="button"
+                  key={value}
+                  onClick={() => handleSleepTimeModeChange(value as typeof sleepTimeMode)}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition ${
+                    sleepTimeMode === value
+                      ? 'bg-accent-cyan/20 text-accent-cyan'
+                      : 'bg-card-border/20 text-muted hover:bg-card-border/30'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {sleepTimeMode === 'custom' && (
+              <input
+                type="datetime-local"
+                value={customWakeAt}
+                onChange={(e) => setCustomWakeAt(e.target.value)}
+                className="input-base mt-3"
+              />
+            )}
+          </div>
+
+          <div>
+            <label className="text-label mb-2 block">Duration (hours)</label>
+            <input
+              type="number"
+              min="1"
+              max="24"
+              step="0.5"
+              value={sleepDuration}
+              onChange={(e) => setSleepDuration(e.target.value)}
+              className="input-base"
+            />
+          </div>
+
+          <SliderInput label="Sleep Quality" value={sleepQuality} onChange={setSleepQuality} />
+
+          <button
+            type="submit"
+            disabled={loading || (sleepTimeMode === 'custom' && !customWakeAt)}
+            className="w-full btn-primary disabled:opacity-50"
+          >
+            {loading ? 'Logging...' : 'Log Sleep'}
           </button>
         </form>
       )}

@@ -9,6 +9,7 @@ import {
   getAllMedicationProfiles,
   getSetting,
   setSetting,
+  deleteLog,
 } from '@/lib/store/db';
 
 export function useIndexedDB() {
@@ -36,5 +37,6 @@ export function useIndexedDB() {
     getMedicationProfiles,
     getSetting,
     setSetting,
+    deleteLog,
   };
 }

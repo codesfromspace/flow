@@ -75,21 +75,21 @@ export function calculateDoseConcentration(event: DoseEvent, currentTime: number
 
   const referenceDose = event.profile.referenceDose ?? event.profile.defaultDose ?? 10;
   const doseScale = event.dose / Math.max(referenceDose, 1);
-  const peakLevel = clamp(doseScale * strength * 0.52, 0, 1);
+  const peakLevel = Math.max(0, doseScale * strength * 0.52);
 
   if (elapsedMinutes <= onset) {
-    return clamp((elapsedMinutes / Math.max(onset, 1)) * peakLevel * 0.65, 0, 1);
+    return Math.max(0, (elapsedMinutes / Math.max(onset, 1)) * peakLevel * 0.65);
   }
 
   if (elapsedMinutes <= peak) {
     const riseProgress = (elapsedMinutes - onset) / Math.max(peak - onset, 1);
-    return clamp(peakLevel * (0.65 + riseProgress * 0.35), 0, 1);
+    return Math.max(0, peakLevel * (0.65 + riseProgress * 0.35));
   }
 
   const timeSincePeak = elapsedMinutes - peak;
   const halfLifeMinutes = Math.max(halfLife * 60, 1);
   const decay = Math.exp(-(Math.LN2 / halfLifeMinutes) * timeSincePeak);
-  return clamp(peakLevel * decay, 0, 1);
+  return Math.max(0, peakLevel * decay);
 }
 
 export function calculateCumulativeConcentration(doseEvents: DoseEvent[], currentTime: number) {
@@ -105,9 +105,9 @@ export function calculateCumulativeConcentration(doseEvents: DoseEvent[], curren
   }
 
   return {
-    total: clamp(total, 0, 1),
+    total: Math.max(0, total),
     byMedication: Object.fromEntries(
-      Object.entries(byMedication).map(([name, value]) => [name, clamp(value, 0, 1)])
+      Object.entries(byMedication).map(([name, value]) => [name, Math.max(0, value)])
     ),
   };
 }

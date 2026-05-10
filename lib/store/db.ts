@@ -90,3 +90,44 @@ export async function clearAllData() {
     tx.done,
   ]);
 }
+
+export async function exportDatabase() {
+  const database = await initDB();
+  const logs = await database.getAll(STORES.LOGS);
+  const medications = await database.getAll(STORES.MEDICATIONS);
+  const settings = await database.getAll(STORES.SETTINGS);
+
+  return JSON.stringify({
+    logs,
+    medications,
+    settings,
+  });
+}
+
+export async function importDatabase(jsonData: string) {
+  const database = await initDB();
+  try {
+    const data = JSON.parse(jsonData);
+    const tx = database.transaction([STORES.LOGS, STORES.MEDICATIONS, STORES.SETTINGS], 'readwrite');
+    
+    await tx.objectStore(STORES.LOGS).clear();
+    await tx.objectStore(STORES.MEDICATIONS).clear();
+    await tx.objectStore(STORES.SETTINGS).clear();
+
+    if (Array.isArray(data.logs)) {
+      for (const log of data.logs) await tx.objectStore(STORES.LOGS).put(log);
+    }
+    if (Array.isArray(data.medications)) {
+      for (const med of data.medications) await tx.objectStore(STORES.MEDICATIONS).put(med);
+    }
+    if (Array.isArray(data.settings)) {
+      for (const setting of data.settings) await tx.objectStore(STORES.SETTINGS).put(setting);
+    }
+    
+    await tx.done;
+    return true;
+  } catch (error) {
+    console.error('Failed to import database:', error);
+    return false;
+  }
+}

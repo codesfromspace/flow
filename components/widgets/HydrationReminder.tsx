@@ -11,11 +11,11 @@ export default function HydrationReminder({ level, concentration }: HydrationRem
 
   const getLevelLabel = () => {
     switch (level) {
-      case 1: return 'Critical';
-      case 2: return 'Low';
-      case 3: return 'Adequate';
-      case 4: return 'Good';
-      case 5: return 'Excellent';
+      case 1: return 'Kritický';
+      case 2: return 'Nízký';
+      case 3: return 'Adekvátní';
+      case 4: return 'Dobrý';
+      case 5: return 'Výborný';
     }
   };
 
@@ -28,17 +28,17 @@ export default function HydrationReminder({ level, concentration }: HydrationRem
   const getRecommendation = () => {
     if (hasActiveMedication) {
       if (level <= 2) {
-        return 'Drink now. Active medication increases dehydration risk.';
+        return 'Napij se hned. Medikace zvyšuje riziko dehydratace.';
       }
       if (level === 3) {
-        return 'Good moment for 200-300ml water.';
+        return 'Ideální chvíle pro 200-300ml vody.';
       }
-      return 'Maintain steady water intake.';
+      return 'Udržuj stabilní příjem tekutin.';
     } else {
       if (level <= 2) {
-        return 'Low hydration. Drink gradually.';
+        return 'Nízká hydratace. Pij postupně.';
       }
-      return 'Hydration is stable.';
+      return 'Hydratace je stabilní.';
     }
   };
 
@@ -47,7 +47,7 @@ export default function HydrationReminder({ level, concentration }: HydrationRem
   return (
     <div className={`card-base h-full min-h-[220px] p-4 flex flex-col justify-between gap-3 ${isUrgent ? 'border border-status-danger/40 bg-status-danger/5' : ''}`}>
       <div>
-        <p className="text-label mb-2">Hydration Status</p>
+        <p className="text-label mb-2">Stav hydratace</p>
         <div className="flex items-center gap-2">
           <div className="flex gap-1">
             {[1, 2, 3, 4, 5].map((i) => (
@@ -70,7 +70,7 @@ export default function HydrationReminder({ level, concentration }: HydrationRem
       </div>
 
       <p className="rounded-xl border border-card-border/60 bg-card-border/10 p-3 text-xs font-medium leading-relaxed text-muted">{summary}</p>
-      {hasActiveMedication ? <p className="text-xs font-medium text-muted">Medication active: hydrate regularly.</p> : null}
+      {hasActiveMedication ? <p className="text-xs font-medium text-muted">Aktivní medikace: doplňuj tekutiny pravidelně.</p> : null}
     </div>
   );
 }

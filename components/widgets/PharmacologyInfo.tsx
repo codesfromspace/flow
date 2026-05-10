@@ -1,22 +1,139 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function PharmacologyInfo() {
-  const [expandedSection, setExpandedSection] = useState<string | null>('overview');
+  const [expandedSections, setExpandedSections] = useState<string[]>(['overview']);
+  const [selectedDrug, setSelectedDrug] = useState<'methylphenidate' | 'amphetamine' | 'caffeine'>('methylphenidate');
+
+  useEffect(() => {
+    const saved = localStorage.getItem('pharmacologyExpandedSections');
+    if (saved) {
+      try {
+        setExpandedSections(JSON.parse(saved));
+      } catch (e) {}
+    }
+  }, []);
+
+  const toggleSection = (id: string) => {
+    setExpandedSections(prev => {
+      const next = prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id];
+      localStorage.setItem('pharmacologyExpandedSections', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const drugInfo = {
+    methylphenidate: {
+      name: 'Methylfenidát (Ritalin/Concerta)',
+      overview: 'Syntetický stimulant centrálního nervového systému, selektivní inhibitor zpětného vychytávání dopaminu a noradrenalinu.',
+      mechanism: (
+        <>
+          <p>Blokuje <strong>DAT (dopaminový transportér)</strong> a <strong>NET (noradrenalinový transportér)</strong> na presynaptické membráně.</p>
+          <p className="text-muted mt-2">Výsledek:</p>
+          <ul className="text-muted space-y-1 ml-3">
+            <li>• ↑ dopamin v prefrontálním kortexu → zvýšená pozornost, ohnisko</li>
+            <li>• ↑ noradrenalin → vyšší bdělost, motivace</li>
+            <li>• ↓ hyperaktivita a impulsivita</li>
+          </ul>
+        </>
+      ),
+      kinetics: (
+        <>
+          <div className="bg-card-border/10 p-2 rounded">
+            <p className="font-medium mb-1">Okamžitý (IR):</p>
+            <ul className="text-muted space-y-1 ml-3">
+              <li>• <strong>Onset:</strong> 15-20 minut</li>
+              <li>• <strong>Peak:</strong> 1-2 hodiny</li>
+              <li>• <strong>Half-life:</strong> 3-4 hodiny</li>
+              <li>• <strong>Trvání:</strong> 4-6 hodin</li>
+            </ul>
+          </div>
+          <div className="bg-card-border/10 p-2 rounded mt-2">
+            <p className="font-medium mb-1">Prodloužený (XR):</p>
+            <ul className="text-muted space-y-1 ml-3">
+              <li>• <strong>Onset:</strong> 30-60 minut</li>
+              <li>• <strong>Peak:</strong> 3-4 hodiny</li>
+              <li>• <strong>Half-life:</strong> 6-8 hodin</li>
+              <li>• <strong>Trvání:</strong> 8-12 hodin</li>
+            </ul>
+          </div>
+        </>
+      )
+    },
+    amphetamine: {
+      name: 'Amfetamin (Adderall/Elvanse)',
+      overview: 'Stimulant uvolňující dopamin a noradrenalin a blokující jejich zpětné vychytávání (přes VMAT2).',
+      mechanism: (
+        <>
+          <p>Blokuje DAT a NET a navíc <strong>obrací jejich funkci</strong> – pumpuje dopamin přímo z presynaptického neuronu do synaptické štěrbiny.</p>
+          <p className="text-muted mt-2">Výsledek:</p>
+          <ul className="text-muted space-y-1 ml-3">
+            <li>• Masivní uvolnění dopaminu (více než u methylfenidátu)</li>
+            <li>• Výrazná stimulace a bdělost</li>
+          </ul>
+        </>
+      ),
+      kinetics: (
+        <div className="bg-card-border/10 p-2 rounded">
+          <p className="font-medium mb-1">Amfetaminové soli:</p>
+          <ul className="text-muted space-y-1 ml-3">
+            <li>• <strong>Onset:</strong> 20-30 minut</li>
+            <li>• <strong>Peak:</strong> 2.5 hodiny</li>
+            <li>• <strong>Half-life:</strong> 10-13 hodin</li>
+            <li>• <strong>Trvání:</strong> 6-8 hodin (IR)</li>
+          </ul>
+        </div>
+      )
+    },
+    caffeine: {
+      name: 'Kofein',
+      overview: 'Přirozeně se vyskytující stimulant. Antagonista adenosinových receptorů.',
+      mechanism: (
+        <>
+          <p>Blokuje <strong>receptory pro adenosin</strong> (molekulu, která se hromadí během bdělosti a způsobuje ospalost).</p>
+          <p className="text-muted mt-2">Výsledek:</p>
+          <ul className="text-muted space-y-1 ml-3">
+            <li>• Mozek "nevidí" únavu, kterou reálně má</li>
+            <li>• Nepřímé uvolnění malého množství dopaminu</li>
+            <li>• Adrenalinová odezva (zrychlený tep)</li>
+          </ul>
+        </>
+      ),
+      kinetics: (
+        <div className="bg-card-border/10 p-2 rounded">
+          <p className="font-medium mb-1">Běžný Kofein:</p>
+          <ul className="text-muted space-y-1 ml-3">
+            <li>• <strong>Onset:</strong> 15-20 minut</li>
+            <li>• <strong>Peak:</strong> 45 minut</li>
+            <li>• <strong>Half-life:</strong> 5-6 hodin</li>
+            <li>• <strong>Trvání:</strong> 3-5 hodin</li>
+          </ul>
+        </div>
+      )
+    }
+  };
+
+  const currentInfo = drugInfo[selectedDrug];
 
   const sections = [
     {
       id: 'overview',
-      title: '📋 Methylfenidat (Ritalín)',
+      title: `📋 ${currentInfo.name}`,
       content: (
-        <div className="space-y-2 text-xs">
-          <p>
-            <strong>Co to je:</strong> Syntetický stimulant centrálního nervového systému, selektivní inhibitor zpětného vychytávání dopaminu a noradrenalinu.
-          </p>
-          <p>
-            <strong>Medicínské použití:</strong> ADHD, narkolepsie, hypersomnie.
-          </p>
+        <div className="space-y-3 text-xs">
+          <div className="flex bg-card-border/10 rounded overflow-hidden border border-card-border/20 mb-3">
+            {(['methylphenidate', 'amphetamine', 'caffeine'] as const).map(drug => (
+              <button 
+                key={drug} 
+                onClick={() => setSelectedDrug(drug)}
+                className={`flex-1 py-1.5 px-2 text-center transition ${selectedDrug === drug ? 'bg-accent-cyan text-white font-medium' : 'text-muted hover:bg-card-border/20'}`}
+              >
+                {drug === 'methylphenidate' ? 'MPH' : drug === 'amphetamine' ? 'AMP' : 'Kofein'}
+              </button>
+            ))}
+          </div>
+          <p><strong>Co to je:</strong> {currentInfo.overview}</p>
         </div>
       ),
     },
@@ -25,15 +142,7 @@ export default function PharmacologyInfo() {
       title: '⚙️ Mechanismus účinku',
       content: (
         <div className="space-y-2 text-xs">
-          <p>
-            Methylfenidat blokuje <strong>DAT (dopaminový transportér)</strong> a <strong>NET (noradrenalinový transportér)</strong> na presynaptické membráně.
-          </p>
-          <p className="text-muted">Výsledek:</p>
-          <ul className="text-muted space-y-1 ml-3">
-            <li>• ↑ dopamin v prefrontálním kortexu → zvýšená pozornost, ohnisko</li>
-            <li>• ↑ noradrenalin → vyšší bdělost, motivace</li>
-            <li>• ↓ hyperaktivita a impulsivita</li>
-          </ul>
+          {currentInfo.mechanism}
         </div>
       ),
     },
@@ -42,24 +151,7 @@ export default function PharmacologyInfo() {
       title: '⏱️ Farmakokinetika',
       content: (
         <div className="space-y-3 text-xs">
-          <div className="bg-card-border/10 p-2 rounded">
-            <p className="font-medium mb-1">Okamžitý Ritalín (IR):</p>
-            <ul className="text-muted space-y-1 ml-3">
-              <li>• <strong>Onset:</strong> 15-20 minut</li>
-              <li>• <strong>Peak:</strong> 1-2 hodiny</li>
-              <li>• <strong>Half-life:</strong> 3-4 hodiny</li>
-              <li>• <strong>Trvání:</strong> 4-6 hodin</li>
-            </ul>
-          </div>
-          <div className="bg-card-border/10 p-2 rounded">
-            <p className="font-medium mb-1">Prodloužený Concerta (XR):</p>
-            <ul className="text-muted space-y-1 ml-3">
-              <li>• <strong>Onset:</strong> 30-60 minut</li>
-              <li>• <strong>Peak:</strong> 3-4 hodiny</li>
-              <li>• <strong>Half-life:</strong> 6-8 hodin</li>
-              <li>• <strong>Trvání:</strong> 8-12 hodin</li>
-            </ul>
-          </div>
+          {currentInfo.kinetics}
         </div>
       ),
     },
@@ -135,24 +227,20 @@ export default function PharmacologyInfo() {
       {sections.map((section) => (
         <div key={section.id} className="card-base border border-card-border/30 overflow-hidden">
           <button
-            onClick={() =>
-              setExpandedSection(
-                expandedSection === section.id ? null : section.id
-              )
-            }
+            onClick={() => toggleSection(section.id)}
             className="w-full px-4 py-3 flex items-center justify-between hover:bg-card-border/10 transition-colors text-left"
           >
             <h4 className="text-sm font-medium text-foreground">{section.title}</h4>
             <span
               className={`text-lg transition-transform ${
-                expandedSection === section.id ? 'rotate-180' : ''
+                expandedSections.includes(section.id) ? 'rotate-180' : ''
               }`}
             >
               ▼
             </span>
           </button>
 
-          {expandedSection === section.id && (
+          {expandedSections.includes(section.id) && (
             <div className="px-4 pb-3 border-t border-card-border/20 pt-3">
               {section.content}
             </div>

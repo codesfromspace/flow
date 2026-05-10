@@ -7,10 +7,10 @@ interface SleepPressureProps {
 
 export default function SleepPressure({ pressure, hoursAwake }: SleepPressureProps) {
   const getHealthStatus = () => {
-    if (pressure < 30) return 'Low';
-    if (pressure < 60) return 'Moderate';
-    if (pressure < 80) return 'High';
-    return 'Critical';
+    if (pressure < 30) return 'Nízký';
+    if (pressure < 60) return 'Střední';
+    if (pressure < 80) return 'Vysoký';
+    return 'Kritický';
   };
 
   const getStatusColor = () => {
@@ -27,16 +27,40 @@ export default function SleepPressure({ pressure, hoursAwake }: SleepPressurePro
     return 'text-status-red';
   };
 
-  const getSummary = () => {
-    if (pressure < 30) return 'Rested. Good window for demanding work.';
-    if (pressure < 60) return 'Normal pressure. Keep breaks light and regular.';
-    if (pressure < 80) return 'High pressure. Plan lighter work soon.';
-    return 'Critical pressure. Sleep should take priority.';
+  const getRecommendation = () => {
+    if (pressure < 30) {
+      return {
+        title: '✅ Odpočinutý',
+        message: 'Dostatečně jsi spal. Tvůj mozek je svěží.',
+        tips: ['Ideální čas pro náročnou práci', 'Vysoká kvalita rozhodování', 'Dobrá odezva na medikaci'],
+      };
+    }
+    if (pressure < 60) {
+      return {
+        title: '🟢 Normální',
+        message: 'Spánkový tlak je přiměřený. Dobrá pracovní kapacita.',
+        tips: ['Běžné pracovní tempo', 'Zvaž malou přestávku později', 'Zatím bez spánkového deficitu'],
+      };
+    }
+    if (pressure < 80) {
+      return {
+        title: '🟡 Vysoký tlak',
+        message: 'Jsi vzhůru příliš dlouho. Spánek by byl dobrý.',
+        tips: ['Zvaž 20 min power nap', 'Kofein POUZE do 15:00', 'Voda a zdravé jídlo', 'Zvolni pracovní tempo'],
+      };
+    }
+    return {
+      title: '🔴 Kritický deficit',
+      message: 'MUSÍŠ SPÁT. Tvé kognitivní schopnosti jsou zhoršeny.',
+      tips: ['30-90 min spánek ASAP', 'Medikace nebude fungovat správně', 'Nehodnoť své schopnosti teď', 'Zvaž bezpečnost (neřiď auto)'],
+    };
   };
+
+  const rec = getRecommendation();
 
   return (
     <div className={`card-base h-full min-h-[220px] p-4 bg-gradient-to-br ${getStatusColor()} flex flex-col justify-between gap-3`}>
-      <p className="text-label">Sleep Pressure</p>
+      <p className="text-label">Spánkový tlak</p>
       <div className="space-y-2">
         <div className="flex items-baseline gap-2">
           <span className="text-headline font-light">{Math.round(pressure)}%</span>
@@ -46,9 +70,26 @@ export default function SleepPressure({ pressure, hoursAwake }: SleepPressurePro
           <div className={`h-full transition-all duration-500 ${pressure < 30 ? 'bg-status-green' : pressure < 60 ? 'bg-status-blue' : pressure < 80 ? 'bg-status-amber' : 'bg-status-red'}`} style={{ width: `${pressure}%` }} />
         </div>
       </div>
-      <p className="text-xs text-muted">Vzhůru {Math.floor(hoursAwake)}h {Math.round((hoursAwake % 1) * 60)}m</p>
+      <p className="text-xs text-muted">Od probuzení: {Math.floor(hoursAwake)}h {Math.round((hoursAwake % 1) * 60)}m</p>
 
-      <p className="rounded-xl border border-card-border/60 bg-card-border/10 p-3 text-xs font-medium leading-relaxed text-muted">{getSummary()}</p>
+      <div className="bg-card-border/10 p-2 rounded space-y-2 border border-card-border/20">
+        <p className="text-xs font-medium">{rec.title}</p>
+        <p className="text-xs text-muted leading-relaxed">{rec.message}</p>
+        <ul className="text-xs text-muted space-y-1">
+          {rec.tips.map((tip, i) => (
+            <li key={i} className="flex gap-2">
+              <span>•</span>
+              <span>{tip}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="border-t border-card-border/20 pt-2">
+        <p className="text-xs text-muted">
+          <strong>ℹ️ Co to je:</strong> Tlak spánku (adenosin) roste s každou hodinou bdělosti. Únava po vyprchání léků je zhoršená nezpracovaným tlakem spánku.
+        </p>
+      </div>
     </div>
   );
 }

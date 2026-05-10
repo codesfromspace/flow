@@ -1,6 +1,6 @@
 'use client';
 
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceArea, Legend } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceArea, Legend, Brush } from 'recharts';
 import { normalizeEffectiveRange } from '@/lib/utils/cognitive-math';
 import { EffectiveRange } from '@/types';
 
@@ -14,11 +14,12 @@ interface DataPoint {
 interface ActivationCurveProps {
   data: DataPoint[];
   medications: Array<{ name: string; color: string; doseTime: number }>;
+  doses?: Array<{ timestamp: number; time: string; label: string; color: string }>;
   currentTime: number;
   effectiveRange?: EffectiveRange;
 }
 
-export default function ActivationCurve({ data, medications, currentTime, effectiveRange }: ActivationCurveProps) {
+export default function ActivationCurve({ data, medications, doses, currentTime, effectiveRange }: ActivationCurveProps) {
   const range = normalizeEffectiveRange(effectiveRange);
   const maxConcentration = Math.max(...data.map((point) => point.concentration), range.upper, 1);
   const yMax = Math.min(1.25, Math.max(1.1, Math.ceil(maxConcentration * 10 + 1) / 10));
@@ -43,12 +44,8 @@ export default function ActivationCurve({ data, medications, currentTime, effect
   const getTimingInfo = () => {
     if (data.length < 2) return null;
 
-    const activeThreshold = 0.01;
-    const activePoints = data.filter((point) => point.concentration > activeThreshold);
-    if (activePoints.length === 0) return null;
-
-    const firstPoint = activePoints[0];
-    const lastPoint = activePoints[activePoints.length - 1];
+    const firstPoint = data.find(d => d.concentration > 0.02) || data[0];
+    const lastPoint = [...data].reverse().find(d => d.concentration > 0.02) || data[data.length - 1];
 
     const peakIndex = data.reduce((maxIdx, point, idx) =>
       point.concentration > data[maxIdx].concentration ? idx : maxIdx, 0);
@@ -59,9 +56,12 @@ export default function ActivationCurve({ data, medications, currentTime, effect
     const lastTime = new Date(lastPoint.timestamp);
 
     return {
-      firstLabel: firstTime.toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit', hour12: false }),
-      peakLabel: peakTime.toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit', hour12: false }),
-      lastLabel: lastTime.toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit', hour12: false }),
+      firstLabel: firstTime.toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' }),
+      firstTimestamp: firstPoint.timestamp,
+      peakLabel: peakTime.toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' }),
+      peakTimestamp: peakPoint.timestamp,
+      lastLabel: lastTime.toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' }),
+      lastTimestamp: lastPoint.timestamp,
       peakPercent: (peakIndex / data.length) * 100,
     };
   };
@@ -86,7 +86,7 @@ export default function ActivationCurve({ data, medications, currentTime, effect
         </div>
       </div>
 
-      <ResponsiveContainer width="100%" height={380}>
+      <ResponsiveContainer width="100%" height={480}>
         <AreaChart data={data} margin={{ top: 40, right: 30, left: 0, bottom: 20 }}>
           <defs>
             <linearGradient id="colorConcentration" x1="0" y1="0" x2="0" y2="1">
@@ -108,13 +108,32 @@ export default function ActivationCurve({ data, medications, currentTime, effect
           </defs>
 
           <CartesianGrid strokeDasharray="3 3" stroke="rgb(51, 65, 85, 0.3)" vertical={false} />
-          <XAxis dataKey="time" tick={{ fill: 'rgb(100, 116, 139)', fontSize: 12 }} axisLine={false} tickLine={false} />
+          <XAxis 
+            dataKey="timestamp" 
+            type="number"
+            scale="time"
+            domain={['dataMin', 'dataMax']}
+            tickFormatter={(val) => {
+              const d = new Date(val);
+              const dataMin = data[0]?.timestamp || 0;
+              const dataMax = data[data.length - 1]?.timestamp || 0;
+              const isMultiDay = dataMax - dataMin > 25 * 60 * 60 * 1000;
+              let s = d.toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' });
+              if (isMultiDay) {
+                s = d.toLocaleDateString('cs-CZ', { day: 'numeric', month: 'numeric' }) + ' ' + s;
+              }
+              return s;
+            }}
+            tick={{ fill: 'rgb(100, 116, 139)', fontSize: 12 }} 
+            axisLine={false} 
+            tickLine={false} 
+            minTickGap={40} 
+          />
           <YAxis
             tick={{ fill: 'rgb(100, 116, 139)', fontSize: 12 }}
             axisLine={false}
             tickLine={false}
-            domain={[0, yMax]}
-            ticks={yTicks}
+            domain={[0, (dataMax: number) => Math.max(1, dataMax)]}
             tickFormatter={(value) => `${Math.round(value * 100)}%`}
             label={{ value: 'Relative activation', angle: -90, position: 'insideLeft' }}
           />
@@ -131,24 +150,35 @@ export default function ActivationCurve({ data, medications, currentTime, effect
             label={{ value: 'Estimated useful range', position: 'insideTopRight', fill: '#10b981', fontSize: 11 }}
           />
 
-          {timing && (
+          {doses?.map((dose, idx) => (
+            <ReferenceLine
+              key={`dose-${idx}`}
+              x={dose.timestamp}
+              stroke={dose.color}
+              strokeDasharray="4 4"
+              strokeWidth={1.5}
+              label={{ value: dose.label, position: 'insideBottomLeft', fill: dose.color, fontSize: 11, offset: 20, angle: -90 }}
+            />
+          ))}
+
+          {timing && data.length <= 100 && (
             <>
               <ReferenceLine
-                x={timing.firstLabel}
+                x={timing.firstTimestamp}
                 stroke="rgb(16, 185, 129)"
                 strokeDasharray="5 5"
                 strokeWidth={1.5}
                 label={{ value: 'Onset', position: 'top', fill: 'rgb(16, 185, 129)', fontSize: 11, offset: 20 }}
               />
               <ReferenceLine
-                x={timing.peakLabel}
+                x={timing.peakTimestamp}
                 stroke="rgb(34, 211, 238)"
                 strokeDasharray="5 5"
                 strokeWidth={2}
                 label={{ value: 'Peak', position: 'top', fill: 'rgb(34, 211, 238)', fontSize: 11, offset: 20, fontWeight: 'bold' }}
               />
               <ReferenceLine
-                x={timing.lastLabel}
+                x={timing.lastTimestamp}
                 stroke="rgb(245, 158, 11)"
                 strokeDasharray="5 5"
                 strokeWidth={1.5}
@@ -167,7 +197,13 @@ export default function ActivationCurve({ data, medications, currentTime, effect
             animationDuration={500}
             name="Actual concentration"
           />
-
+          <Brush 
+            dataKey="timestamp" 
+            height={30} 
+            stroke="#0e9fa8" 
+            fill="transparent"
+            tickFormatter={() => ''}
+          />
         </AreaChart>
       </ResponsiveContainer>
 

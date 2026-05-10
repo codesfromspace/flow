@@ -3,6 +3,7 @@ import { getSetting, setSetting } from '@/lib/store/db';
 
 export const DEFAULT_WIDGET_ORDER = [
   'cognitive-state',
+  'daily-summary',
   'focus-quality',
   'rebound-risk',
   'sleep-pressure',
@@ -19,7 +20,14 @@ export function useWidgetOrder() {
     const loadOrder = async () => {
       try {
         const savedOrder = await getSetting<string[]>('widgetOrder');
-        if (savedOrder) setWidgetOrder(savedOrder);
+        if (savedOrder) {
+          const missingWidgets = DEFAULT_WIDGET_ORDER.filter(id => !savedOrder.includes(id));
+          if (missingWidgets.length > 0) {
+            setWidgetOrder([...savedOrder, ...missingWidgets]);
+          } else {
+            setWidgetOrder(savedOrder);
+          }
+        }
       } catch (err) {
         console.error('Failed to load widget order:', err);
       }

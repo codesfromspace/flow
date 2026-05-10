@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { addMedicationProfile, clearAllData, getSetting, setSetting } from '@/lib/store/db';
+import { addMedicationProfile, clearAllData, getSetting, setSetting, exportDatabase, importDatabase } from '@/lib/store/db';
 import { DEFAULT_EFFECTIVE_RANGE, normalizeEffectiveRange } from '@/lib/utils/cognitive-math';
 import { CognitiveLog, EffectiveRange, MedicationProfile, UserProfile } from '@/types';
 
@@ -30,6 +30,7 @@ type MedicationForm = {
 export default function InfoModal({ isOpen, onClose, logs, medications, onMedicationSaved, effectiveRange, onEffectiveRangeSaved }: InfoModalProps) {
   const [activeTab, setActiveTab] = useState<'info' | 'export' | 'settings'>('info');
   const [exportStatus, setExportStatus] = useState('');
+  const [importStatus, setImportStatus] = useState('');
   const [userProfile, setUserProfile] = useState<UserProfile>({});
   const [rangeForm, setRangeForm] = useState({
     lower: String(Math.round(effectiveRange.lower * 100)),
@@ -119,6 +120,42 @@ ${sleepLogs.map(log => `- Kvalita: ${log.data.quality}/5, Trvání: ${log.data.d
     } catch (err) {
       setExportStatus('✗ Chyba při exportu');
     }
+  };
+
+  const handleExportJson = async () => {
+    try {
+      const jsonStr = await exportDatabase();
+      const element = document.createElement('a');
+      element.setAttribute('href', 'data:application/json;charset=utf-8,' + encodeURIComponent(jsonStr));
+      element.setAttribute('download', `flow-backup-${new Date().toISOString().split('T')[0]}.json`);
+      element.style.display = 'none';
+      document.body.appendChild(element);
+      element.click();
+      document.body.removeChild(element);
+      setExportStatus('✓ JSON záloha stažena!');
+      setTimeout(() => setExportStatus(''), 3000);
+    } catch (err) {
+      setExportStatus('✗ Chyba při exportu JSON');
+    }
+  };
+
+  const handleImportJson = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const success = await importDatabase(text);
+      if (success) {
+        setImportStatus('✓ Data úspěšně obnovena! Obnovuji aplikaci...');
+        setTimeout(() => window.location.reload(), 1500);
+      } else {
+        setImportStatus('✗ Neplatný formát dat');
+      }
+    } catch (err) {
+      setImportStatus('✗ Chyba při čtení souboru');
+    }
+    e.target.value = '';
   };
 
   const handleSaveProfile = async () => {
@@ -292,14 +329,37 @@ ${sleepLogs.map(log => `- Kvalita: ${log.data.quality}/5, Trvání: ${log.data.d
 
               <button
                 onClick={handleExport}
-                className="w-full btn-primary"
+                className="w-full btn-primary mb-2"
               >
-                Exportovat do Markdown
+                Exportovat do Markdown (Čtení)
+              </button>
+              
+              <button
+                onClick={handleExportJson}
+                className="w-full btn-secondary mb-4"
+              >
+                Stáhnout zálohu (JSON)
               </button>
 
               {exportStatus && (
-                <p className="text-sm text-center text-accent-cyan">{exportStatus}</p>
+                <p className="text-sm text-center text-accent-cyan mb-4">{exportStatus}</p>
               )}
+
+              <div className="border-t border-card-border/30 pt-4 mt-4">
+                <h3 className="text-lg font-medium mb-2">Import dat</h3>
+                <p className="text-sm text-muted mb-4">
+                  Obnov data ze staženého JSON souboru. Pozor, aktuální data budou přepsána!
+                </p>
+                <input
+                  type="file"
+                  accept=".json"
+                  onChange={handleImportJson}
+                  className="block w-full text-sm text-muted file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-card-border/20 file:text-foreground hover:file:bg-card-border/30 transition"
+                />
+                {importStatus && (
+                  <p className="text-sm text-center mt-3 text-accent-cyan">{importStatus}</p>
+                )}
+              </div>
             </div>
           )}
 
