@@ -48,7 +48,7 @@ export function generateTimelineData(startTime: number, endTime: number, doses: 
 
   for (let time = startTime; time <= endTime; time += interval) {
     const { total: totalConcentration } = calculateCumulativeConcentration(doses, time);
-    const timeStr = new Date(time).toLocaleTimeString('en-US', {
+    const timeStr = new Date(time).toLocaleTimeString('cs-CZ', {
       hour: '2-digit',
       minute: '2-digit',
       hour12: false,

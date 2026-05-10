@@ -390,7 +390,7 @@ export default function Dashboard() {
         id: log.id,
         label,
         type: log.logType,
-        time: log.timestamp.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+        time: log.timestamp.toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit', hour12: false }),
       };
     });
 

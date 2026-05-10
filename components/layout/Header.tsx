@@ -16,10 +16,10 @@ export default function Header({ onOpenInfo, profileName }: HeaderProps) {
     const updateTime = () => {
       const now = new Date();
       setCurrentTime(
-        now.toLocaleTimeString('en-US', {
+        now.toLocaleTimeString('cs-CZ', {
           hour: '2-digit',
           minute: '2-digit',
-          hour12: true,
+          hour12: false,
         })
       );
       setCurrentDate(

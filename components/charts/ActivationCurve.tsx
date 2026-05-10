@@ -39,8 +39,12 @@ export default function ActivationCurve({ data, medications, currentTime, effect
   const getTimingInfo = () => {
     if (data.length < 2) return null;
 
-    const firstPoint = data[0];
-    const lastPoint = data[data.length - 1];
+    const activeThreshold = 0.01;
+    const activePoints = data.filter((point) => point.concentration > activeThreshold);
+    if (activePoints.length === 0) return null;
+
+    const firstPoint = activePoints[0];
+    const lastPoint = activePoints[activePoints.length - 1];
 
     const peakIndex = data.reduce((maxIdx, point, idx) =>
       point.concentration > data[maxIdx].concentration ? idx : maxIdx, 0);
@@ -51,9 +55,9 @@ export default function ActivationCurve({ data, medications, currentTime, effect
     const lastTime = new Date(lastPoint.timestamp);
 
     return {
-      firstLabel: firstTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
-      peakLabel: peakTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
-      lastLabel: lastTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+      firstLabel: firstTime.toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit', hour12: false }),
+      peakLabel: peakTime.toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit', hour12: false }),
+      lastLabel: lastTime.toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit', hour12: false }),
       peakPercent: (peakIndex / data.length) * 100,
     };
   };
@@ -166,15 +170,15 @@ export default function ActivationCurve({ data, medications, currentTime, effect
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-card-border/30">
         <div>
           <p className="text-xs text-muted mb-1">Onset (Start)</p>
-          <p className="text-sm font-medium text-accent-green">{timing?.firstLabel}</p>
+          <p className="text-sm font-medium text-accent-green">{timing?.firstLabel ?? 'No dose'}</p>
         </div>
         <div>
           <p className="text-xs text-muted mb-1">Peak Effect</p>
-          <p className="text-sm font-medium text-accent-cyan">{timing?.peakLabel}</p>
+          <p className="text-sm font-medium text-accent-cyan">{timing?.peakLabel ?? 'No dose'}</p>
         </div>
         <div>
           <p className="text-xs text-muted mb-1">Wears Off</p>
-          <p className="text-sm font-medium text-accent-amber">{timing?.lastLabel}</p>
+          <p className="text-sm font-medium text-accent-amber">{timing?.lastLabel ?? 'No dose'}</p>
         </div>
         <div>
           <p className="text-xs text-muted mb-1">Current Level</p>
