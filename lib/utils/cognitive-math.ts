@@ -113,6 +113,30 @@ const smoothStep = (progress: number) => {
   return t * t * (3 - 2 * t);
 };
 
+// Solve for absorption rate constant ka given ke and target peak time (Tmax),
+// using bisection on: ln(ka/ke) / (ka - ke) = tmaxMinutes
+const solveAbsorptionRate = (ke: number, tmaxMinutes: number): number => {
+  if (tmaxMinutes >= 0.98 / ke) return ke * 1.02;
+  const f = (ka: number) => Math.log(ka / ke) / (ka - ke) - tmaxMinutes;
+  let lo = ke * 1.001;
+  let hi = ke * 1000;
+  while (f(hi) > 0 && hi < ke * 1e9) hi *= 10;
+  for (let i = 0; i < 52; i++) {
+    const mid = (lo + hi) / 2;
+    if (f(mid) > 0) lo = mid;
+    else hi = mid;
+  }
+  return (lo + hi) / 2;
+};
+
+// Bateman equation normalized so C(tmax) = 1
+const batemanNormalized = (t: number, ka: number, ke: number, tmax: number): number => {
+  if (t <= 0) return 0;
+  const denom = Math.exp(-ke * tmax) - Math.exp(-ka * tmax);
+  if (denom < 1e-10) return 0;
+  return Math.max(0, (Math.exp(-ke * t) - Math.exp(-ka * t)) / denom);
+};
+
 const normalizeBioavailability = (value?: number, doseForm?: MedicationDoseForm) => {
   const fallback = doseForm ? DEFAULT_BIOAVAILABILITY_BY_FORM[doseForm] : 1;
   return clamp(value ?? fallback, 0.05, 1.2);
@@ -150,8 +174,6 @@ export function calculateDoseConcentration(
   const userSensitivity = calculateUserSensitivity(options.userProfile);
   const adjustedHalfLife = halfLife * calculateHalfLifeModifier(options.userProfile);
 
-  if (elapsedMinutes >= duration) return 0;
-
   const referenceDose = event.profile.referenceDose ?? event.profile.defaultDose ?? 10;
   const doseScale = event.dose / Math.max(referenceDose, 1);
   const peakLevel = Math.max(0, doseScale * strength * bioavailability * userSensitivity * 0.52);
@@ -171,18 +193,10 @@ export function calculateDoseConcentration(
     return Math.max(0, peakLevel * 0.82 * decay);
   }
 
-  if (elapsedMinutes <= onset) {
-    return Math.max(0, smoothStep(elapsedMinutes / Math.max(onset, 1)) * peakLevel * 0.65);
-  }
-
-  if (elapsedMinutes <= peak) {
-    const riseProgress = (elapsedMinutes - onset) / Math.max(peak - onset, 1);
-    return Math.max(0, peakLevel * (0.65 + smoothStep(riseProgress) * 0.35));
-  }
-
-  const timeSincePeak = elapsedMinutes - peak;
-  const decay = decayFromHalfLife(timeSincePeak, adjustedHalfLife);
-  return Math.max(0, peakLevel * decay);
+  const ke = Math.LN2 / Math.max(adjustedHalfLife * 60, 1);
+  const ka = solveAbsorptionRate(ke, peak);
+  const result = batemanNormalized(elapsedMinutes, ka, ke, peak) * peakLevel;
+  return result < 1e-4 ? 0 : result;
 }
 
 export function calculateCumulativeConcentration(
