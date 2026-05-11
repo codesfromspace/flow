@@ -161,19 +161,45 @@ export default function PharmacologyInfo() {
       content: (
         <div className="space-y-2 text-xs">
           <p className="text-muted">
-            Aplikujeme <strong>model absorpce a eliminace</strong>:
+            <strong>Batemanův model</strong> — standardní 1-kompartmentový model pro orální absorpci:
           </p>
           <div className="bg-card-border/10 p-2 rounded font-mono text-[0.7rem] overflow-x-auto">
-            <p>C(t) = (D × ka × ke) / (V × (ka - ke))</p>
-            <p className="mt-1 text-muted text-[0.65rem]">× (e<sup>-ke×t</sup> - e<sup>-ka×t</sup>)</p>
+            <p>C(t) = (e<sup>-ke×t</sup> - e<sup>-ka×t</sup>) / normalizace</p>
           </div>
           <ul className="text-muted space-y-1 ml-3 mt-2">
-            <li>• <strong>D</strong> = dávka (mg)</li>
-            <li>• <strong>ka</strong> = absorpční konstanta (10% za minutu pro IR)</li>
-            <li>• <strong>ke</strong> = eliminační konstanta (ln2 / half-life)</li>
-            <li>• <strong>V</strong> = objem distribuce</li>
-            <li>• <strong>t</strong> = čas od podání (minuty)</li>
+            <li>• <strong>ka</strong> — absorpční konstanta (odvozena z <strong>peak time</strong>, numericky řešeno bisekčním algoritmem)</li>
+            <li>• <strong>ke</strong> — eliminační konstanta = ln(2) / half-life</li>
+            <li>• <strong>normalizace</strong> — zajistí, že C(Tmax) = 1 (peak = 100%)</li>
+            <li>• <strong>t</strong> — čas od podání (minuty)</li>
           </ul>
+          <p className="text-muted mt-2 text-[0.7rem]">
+            <strong>Výhoda:</strong> Plynulá, fyzikálně přesná křivka bez arbitrárních přechodů. Kombinace absorption + eliminace se děje paralelně (ne sekvenčně).
+          </p>
+        </div>
+      ),
+    },
+    {
+      id: 'personalization',
+      title: '👤 Individuální faktory',
+      content: (
+        <div className="space-y-2 text-xs">
+          <p className="text-muted">
+            Aplikace automaticky přizpůsobuje výpočty dle vašeho profilu:
+          </p>
+          <ul className="text-muted space-y-1.5 ml-3 mt-2">
+            <li>
+              <strong>Váha:</strong> Těžší jedinci (>70kg) mají nižší peak (více rozpuštěného léku), lehčí jedinci vyšší peak. Faktor: (70 / váha)<sup>0.35</sup>
+            </li>
+            <li>
+              <strong>Věk:</strong> Ovlivňuje jak <strong>peak level</strong> tak <strong>half-life</strong> a tím pádem i tvar celé křivky. Starší jedinci zpravidla mají pozvolnější eliminaci.
+            </li>
+            <li>
+              <strong>Bioavailabilita:</strong> Závisí na formě léku (tablet, kapsule, tekutina...). Ovlivňuje výšku peaku.
+            </li>
+          </ul>
+          <p className="text-muted mt-2 text-[0.7rem]">
+            💡 Pro nejpřesnější výpočet si aktualizujte svůj profil (věk, váhu) v nastavení.
+          </p>
         </div>
       ),
     },
