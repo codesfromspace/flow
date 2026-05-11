@@ -96,7 +96,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
             </p>
           </div>
 
-          <nav className="flex w-full gap-2 overflow-x-auto rounded-2xl border border-card-border/90 bg-white p-1 lg:w-auto">
+          <nav className="flex w-full gap-2 overflow-x-auto rounded-2xl border border-card-border/90 bg-card-bg p-1 lg:w-auto">
             {[
               ['/wake', hasWakeToday ? 'Wake ✓' : 'Wake'],
               ['/doses', 'Doses'],
@@ -108,7 +108,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
                 href={path}
                 className={`min-w-28 text-center rounded-xl px-4 py-2 text-sm font-semibold transition ${
                   pathname === path
-                    ? 'bg-foreground text-white shadow-sm'
+                    ? 'bg-foreground text-background shadow-sm'
                     : 'text-muted hover:bg-card-border/30 hover:text-foreground'
                 }`}
               >

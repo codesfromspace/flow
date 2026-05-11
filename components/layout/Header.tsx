@@ -38,12 +38,10 @@ export default function Header({ onOpenInfo, profileName }: HeaderProps) {
   }, []);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-card-border/80 bg-white/78 backdrop-blur-xl">
+    <header className="sticky top-0 z-40 border-b border-card-border/80 bg-[var(--background)]/80 backdrop-blur-xl">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-5">
-            <FlowLogo />
-            <div className="hidden h-8 w-px bg-card-border sm:block" />
             <p className="hidden text-sm font-medium text-muted sm:block">{currentDate}</p>
           </div>
           <div className="flex items-center gap-4">

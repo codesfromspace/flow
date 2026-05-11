@@ -89,7 +89,7 @@ export default function OverviewPage() {
   const { 
     localProfile, logs, todayLogCount, recentLogs, activeMeds, effectiveRange,
     focusLevel, reboundRisk, sleepPressure, currentTime, dayStart, dayEnd,
-    hydrationLevel, timelineData, medications, todayEvents
+    hydrationLevel, timelineData, medications, todayEvents, hoursAwake
   } = useCognitiveState();
 
   const activeMedicationNames = activeMeds
@@ -99,7 +99,7 @@ export default function OverviewPage() {
   const lastLogLabel = recentLogs[0]?.label ?? 'Žádné logy';
 
   return (
-    <div className="flex flex-col gap-5 pb-12 overflow-y-auto">
+    <div className="flex flex-col gap-5 pb-12 overflow-y-auto h-full pr-1">
       <OverviewBrief
         profileName={localProfile?.displayName ?? ''}
         todayLogCount={todayLogCount}
@@ -130,7 +130,7 @@ export default function OverviewPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <EstimatedFocus percentage={focusLevel} trend={focusLevel > 70 ? 'stable' : 'down'} />
         <ReboundRisk level={reboundRisk} />
-        <SleepPressure pressure={sleepPressure} hoursAwake={Math.max(0, (currentTime - dayStart) / (60 * 60 * 1000))} />
+        <SleepPressure pressure={sleepPressure} hoursAwake={hoursAwake} />
         <MentalLoad load={estimateMentalLoad(3, focusLevel / 100)} capacity={75} />
       </div>
 

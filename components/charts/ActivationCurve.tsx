@@ -7,6 +7,7 @@ import { EffectiveRange } from '@/types';
 interface DataPoint {
   time: string;
   concentration: number;
+
   focus: number;
   timestamp: number;
 }
@@ -17,9 +18,11 @@ interface ActivationCurveProps {
   doses?: Array<{ timestamp: number; time: string; label: string; color: string }>;
   currentTime: number;
   effectiveRange?: EffectiveRange;
+  height?: number;
+  mini?: boolean;
 }
 
-export default function ActivationCurve({ data, medications, doses, currentTime, effectiveRange }: ActivationCurveProps) {
+export default function ActivationCurve({ data, medications, doses, currentTime, effectiveRange, height = 480, mini = false }: ActivationCurveProps) {
   const range = normalizeEffectiveRange(effectiveRange);
   const maxConcentration = Math.max(...data.map((point) => point.concentration), range.upper, 1);
   const yMax = Math.min(1.25, Math.max(1.1, Math.ceil(maxConcentration * 10 + 1) / 10));
@@ -90,16 +93,16 @@ export default function ActivationCurve({ data, medications, doses, currentTime,
         <AreaChart data={data} margin={{ top: 40, right: 30, left: 0, bottom: 20 }}>
           <defs>
             <linearGradient id="colorConcentration" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#22d3ee" stopOpacity={0.4} />
-              <stop offset="95%" stopColor="#22d3ee" stopOpacity={0.01} />
+              <stop offset="5%" stopColor="#14b8a6" stopOpacity={0.4} />
+              <stop offset="95%" stopColor="#14b8a6" stopOpacity={0.01} />
             </linearGradient>
             <linearGradient id="onsetZone" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#10b981" stopOpacity={0.08} />
               <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
             </linearGradient>
             <linearGradient id="peakZone" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#22d3ee" stopOpacity={0.12} />
-              <stop offset="100%" stopColor="#22d3ee" stopOpacity={0} />
+              <stop offset="0%" stopColor="#14b8a6" stopOpacity={0.12} />
+              <stop offset="100%" stopColor="#14b8a6" stopOpacity={0} />
             </linearGradient>
             <linearGradient id="declineZone" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.08} />
@@ -108,8 +111,8 @@ export default function ActivationCurve({ data, medications, doses, currentTime,
           </defs>
 
           <CartesianGrid strokeDasharray="3 3" stroke="rgb(51, 65, 85, 0.3)" vertical={false} />
-          <XAxis 
-            dataKey="timestamp" 
+          <XAxis
+            dataKey="timestamp"
             type="number"
             scale="time"
             domain={['dataMin', 'dataMax']}
@@ -124,10 +127,10 @@ export default function ActivationCurve({ data, medications, doses, currentTime,
               }
               return s;
             }}
-            tick={{ fill: 'rgb(100, 116, 139)', fontSize: 12 }} 
-            axisLine={false} 
-            tickLine={false} 
-            minTickGap={40} 
+            tick={{ fill: 'rgb(100, 116, 139)', fontSize: 12 }}
+            axisLine={false}
+            tickLine={false}
+            minTickGap={40}
           />
           <YAxis
             tick={{ fill: 'rgb(100, 116, 139)', fontSize: 12 }}
@@ -187,20 +190,29 @@ export default function ActivationCurve({ data, medications, doses, currentTime,
             </>
           )}
 
-          <Area
-            type="monotone"
-            dataKey="concentration"
-            stroke="#22d3ee"
-            strokeWidth={3}
-            fill="url(#colorConcentration)"
+          <ReferenceLine
+            x={currentTime}
+            stroke="rgb(239, 68, 68)"
+            strokeDasharray="3 3"
+            strokeWidth={1.5}
+            label={{ value: 'Nyní', position: 'insideTopLeft', fill: 'rgb(239, 68, 68)', fontSize: 11, offset: 10 }}
+          />
+
+          <Area 
+            type="monotone" 
+            dataKey="concentration" 
+            stroke="#14b8a6" 
+            fillOpacity={1} 
+            fill="url(#colorConcentration)" 
+            strokeWidth={3} 
             isAnimationActive={true}
             animationDuration={500}
             name="Actual concentration"
           />
-          <Brush 
-            dataKey="timestamp" 
-            height={30} 
-            stroke="#0e9fa8" 
+          <Brush
+            dataKey="timestamp"
+            height={30}
+            stroke="#0e9fa8"
             fill="transparent"
             tickFormatter={() => ''}
           />
@@ -241,7 +253,7 @@ export default function ActivationCurve({ data, medications, doses, currentTime,
         </div>
         <div className="border-t border-card-border/20 pt-2">
           <p className="text-xs text-muted">
-              <strong>Tip:</strong> Pokud dobrý fokus pravidelně přichází níž nebo výš než pásmo, uprav useful range v nastavení podle své zkušenosti.
+            <strong>Tip:</strong> Pokud dobrý fokus pravidelně přichází níž nebo výš než pásmo, uprav useful range v nastavení podle své zkušenosti.
           </p>
         </div>
       </div>

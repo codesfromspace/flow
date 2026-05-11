@@ -38,6 +38,7 @@ interface CognitiveStateContextType {
   dayStart: number;
   dayEnd: number;
   hydrationLevel: number;
+  hoursAwake: number;
   reloadProfile: () => Promise<void>;
   addCognitiveLog: (log: CognitiveLog) => Promise<void>;
   removeCognitiveLog: (id: string) => Promise<void>;
@@ -62,6 +63,7 @@ export function CognitiveStateProvider({ children }: { children: React.ReactNode
   const [currentTime, setCurrentTime] = useState(0);
   const [focusLevel, setFocusLevel] = useState(65);
   const [sleepPressure, setSleepPressure] = useState(45);
+  const [hoursAwake, setHoursAwake] = useState(0);
   const [reboundRisk, setReboundRisk] = useState<'none' | 'low' | 'medium' | 'high'>('low');
   const [activeMeds, setActiveMeds] = useState<string[]>([]);
   const [timelineData, setTimelineData] = useState<ActivationDataPoint[]>([]);
@@ -158,6 +160,7 @@ export function CognitiveStateProvider({ children }: { children: React.ReactNode
         .shift() || 3;
 
       setSleepPressure(calculateSleepPressure(lastSleepTime, now, lastSleepQuality));
+      setHoursAwake(Math.max(0, (now - lastSleepTime) / (60 * 60 * 1000)));
       setActiveMeds(Object.keys(byMedication).filter(key => byMedication[key] > 0.1));
 
       const today = new Date();
@@ -209,10 +212,7 @@ export function CognitiveStateProvider({ children }: { children: React.ReactNode
           label = `${log.data.dose}mg ${log.data.medicationName}`;
           type = 'medication';
         } else if (log.logType === 'mood') {
-          label = `Mood: ${log.data.mood}/5`;
-          type = 'mood_check';
-        } else if (log.logType === 'focus') {
-          label = `Focus: ${log.data.focus}/5`;
+          label = `Mood: ${log.data.mood} | Focus: ${log.data.focus} | Energy: ${log.data.energy} | Clarity: ${log.data.clarity} | Anxiety: ${log.data.anxiety}`;
           type = 'mood_check';
         } else if (log.logType === 'deep_work') {
           label = 'Deep Work Session';
@@ -230,8 +230,7 @@ export function CognitiveStateProvider({ children }: { children: React.ReactNode
       .map((log) => {
         let label = 'Sleep';
         if (log.logType === 'medication') label = `${log.data.dose}mg ${log.data.medicationName}`;
-        else if (log.logType === 'mood') label = `Mood ${log.data.mood}/5 · Focus ${log.data.focus}/5`;
-        else if (log.logType === 'focus') label = `Focus ${log.data.focus}/5`;
+        else if (log.logType === 'mood') label = `Mood: ${log.data.mood} | Focus: ${log.data.focus} | Energy: ${log.data.energy}`;
         else if (log.logType === 'deep_work') label = 'Deep work';
         return {
           id: log.id,
@@ -262,6 +261,7 @@ export function CognitiveStateProvider({ children }: { children: React.ReactNode
       dayStart,
       dayEnd,
       hydrationLevel,
+      hoursAwake,
       reloadProfile,
       addCognitiveLog,
       removeCognitiveLog,

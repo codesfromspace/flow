@@ -1,6 +1,6 @@
 'use client';
 
-import { Area, AreaChart, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { Area, AreaChart, ResponsiveContainer, ReferenceLine, XAxis } from 'recharts';
 
 interface CurrentCognitiveStateProps {
   focusLevel: number;
@@ -151,6 +151,7 @@ export default function CurrentCognitiveState({
         <div className="h-16 mt-4 w-full opacity-60">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={timelineData}>
+              <XAxis dataKey="timestamp" hide type="number" scale="time" domain={['dataMin', 'dataMax']} />
               <defs>
                 <linearGradient id="colorLevel" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor={overstimulated ? '#ef4444' : '#0e9fa8'} stopOpacity={0.5} />
@@ -166,7 +167,7 @@ export default function CurrentCognitiveState({
                 strokeWidth={2} 
                 isAnimationActive={false}
               />
-              <ReferenceLine x={currentTime} stroke="#ffffff" strokeOpacity={0.4} strokeDasharray="3 3" />
+              <ReferenceLine x={currentTime} stroke="#ef4444" strokeOpacity={0.8} strokeDasharray="3 3" strokeWidth={1.5} />
             </AreaChart>
           </ResponsiveContainer>
         </div>

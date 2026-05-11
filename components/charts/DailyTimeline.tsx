@@ -17,12 +17,12 @@ interface DailyTimelineProps {
 export default function DailyTimeline({ events, currentTime, dayStart, dayEnd }: DailyTimelineProps) {
   const getEventColor = (type: string, severity?: string) => {
     switch (type) {
-      case 'medication': return { bg: 'bg-accent-cyan/30', border: 'border-accent-cyan', text: 'text-accent-cyan' };
-      case 'mood_check': return { bg: 'bg-blue-500/30', border: 'border-blue-400', text: 'text-blue-300' };
-      case 'deep_work': return { bg: 'bg-green-500/30', border: 'border-green-400', text: 'text-green-300' };
-      case 'rebound': return severity === 'high' ? { bg: 'bg-red-500/30', border: 'border-red-400', text: 'text-red-300' } : { bg: 'bg-amber-500/30', border: 'border-amber-400', text: 'text-amber-300' };
-      case 'crash': return { bg: 'bg-red-500/30', border: 'border-red-400', text: 'text-red-300' };
-      default: return { bg: 'bg-slate-500/20', border: 'border-slate-400', text: 'text-slate-300' };
+      case 'medication': return { bg: 'bg-accent-cyan/20', border: 'border-accent-cyan/50', text: 'text-accent-cyan' };
+      case 'mood_check': return { bg: 'bg-accent-cyan/10', border: 'border-accent-cyan/30', text: 'text-accent-cyan' };
+      case 'deep_work': return { bg: 'bg-accent-green/20', border: 'border-accent-green/50', text: 'text-accent-green' };
+      case 'rebound': return severity === 'high' ? { bg: 'bg-accent-red/20', border: 'border-accent-red/50', text: 'text-accent-red' } : { bg: 'bg-accent-amber/20', border: 'border-accent-amber/50', text: 'text-accent-amber' };
+      case 'crash': return { bg: 'bg-accent-red/20', border: 'border-accent-red/50', text: 'text-accent-red' };
+      default: return { bg: 'bg-muted/20', border: 'border-muted/50', text: 'text-muted' };
     }
   };
 

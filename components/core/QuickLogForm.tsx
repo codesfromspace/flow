@@ -9,10 +9,14 @@ interface QuickLogFormProps {
   medications: MedicationProfile[];
 }
 
-type LogTab = 'dose' | 'mood' | 'focus' | 'sleep';
+type LogTab = 'dose' | 'state' | 'sleep';
 type Rating = 1 | 2 | 3 | 4 | 5;
 
+import { useCognitiveState } from '@/lib/context/CognitiveStateContext';
+import ActivationCurve from '@/components/charts/ActivationCurve';
+
 export default function QuickLogForm({ onLog, medications }: QuickLogFormProps) {
+  const { timelineData, currentTime, effectiveRange } = useCognitiveState();
   const [activeTab, setActiveTab] = useState<LogTab>('dose');
   const [loading, setLoading] = useState(false);
 
@@ -35,14 +39,12 @@ export default function QuickLogForm({ onLog, medications }: QuickLogFormProps) 
     if (med?.defaultDose) setDose(String(med.defaultDose));
   }, [medications, selectedMed]);
 
-  // Mood form state
+  // State form state
   const [mood, setMood] = useState<Rating>(3);
   const [moodFocus, setMoodFocus] = useState<Rating>(3);
   const [anxiety, setAnxiety] = useState<Rating>(3);
-
-  // Focus form state
-  const [focusLevel, setFocusLevel] = useState<Rating>(3);
   const [clarity, setClarity] = useState<Rating>(3);
+  const [energy, setEnergy] = useState<Rating>(3);
 
   // Sleep form state
   const [sleepTimeMode, setSleepTimeMode] = useState<'now' | 'custom'>('now');
@@ -110,7 +112,7 @@ export default function QuickLogForm({ onLog, medications }: QuickLogFormProps) 
     }
   };
 
-  const handleLogMood = async (e: React.FormEvent) => {
+  const handleLogState = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
@@ -122,8 +124,8 @@ export default function QuickLogForm({ onLog, medications }: QuickLogFormProps) 
         mood,
         focus: moodFocus,
         anxiety,
-        clarity: 3,
-        energy: 3,
+        clarity,
+        energy,
       },
     };
 
@@ -132,34 +134,10 @@ export default function QuickLogForm({ onLog, medications }: QuickLogFormProps) 
       setMood(3);
       setMoodFocus(3);
       setAnxiety(3);
-    } catch (error) {
-      console.error('Error logging mood:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleLogFocus = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    const log: CognitiveLog = {
-      id: uuidv4(),
-      timestamp: new Date(),
-      logType: 'focus',
-      data: {
-        focus: focusLevel,
-        clarity,
-        taskCategory: 'general',
-      },
-    };
-
-    try {
-      await onLog(log);
-      setFocusLevel(3);
       setClarity(3);
+      setEnergy(3);
     } catch (error) {
-      console.error('Error logging focus:', error);
+      console.error('Error logging state:', error);
     } finally {
       setLoading(false);
     }
@@ -247,10 +225,23 @@ export default function QuickLogForm({ onLog, medications }: QuickLogFormProps) 
   );
 
   return (
-    <div className="card-base p-4 border border-card-border/90">
-      {/* Tabs */}
+    <div className="flex flex-col gap-4">
+      {timelineData?.length > 0 && (
+        <div className="card-base p-2 border border-card-border/50">
+          <ActivationCurve 
+            data={timelineData} 
+            medications={medications.map(m => ({ name: m.name, color: '#0e9fa8', doseTime: 0 }))} 
+            currentTime={currentTime} 
+            effectiveRange={effectiveRange} 
+            height={160} 
+            mini={true} 
+          />
+        </div>
+      )}
+      <div className="card-base p-4 border border-card-border/90">
+        {/* Tabs */}
       <div className="flex gap-1 mb-4">
-        {(['dose', 'mood', 'focus', 'sleep'] as const).map((tab) => (
+        {(['dose', 'state', 'sleep'] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -260,7 +251,7 @@ export default function QuickLogForm({ onLog, medications }: QuickLogFormProps) 
                 : 'bg-card-border/20 text-muted hover:bg-card-border/30'
             }`}
           >
-            {tab === 'dose' ? 'Dose' : tab === 'mood' ? 'Mood' : tab === 'focus' ? 'Focus' : 'Sleep'}
+            {tab === 'dose' ? 'Dose' : tab === 'state' ? 'State Check' : 'Sleep'}
           </button>
         ))}
       </div>
@@ -293,6 +284,20 @@ export default function QuickLogForm({ onLog, medications }: QuickLogFormProps) 
               onChange={(e) => setDose(e.target.value)}
               className="input-base"
             />
+            {selectedMedicationId === 'methylphenidate-ir' && (
+              <div className="flex gap-2 mt-2">
+                <button type="button" onClick={() => setDose('5')} className="px-3 py-1.5 rounded bg-card-border/20 text-xs font-medium text-muted hover:bg-card-border/30 transition-colors">1/2 tbl (5mg)</button>
+                <button type="button" onClick={() => setDose('10')} className="px-3 py-1.5 rounded bg-card-border/20 text-xs font-medium text-muted hover:bg-card-border/30 transition-colors">1 tbl (10mg)</button>
+                <button type="button" onClick={() => setDose('20')} className="px-3 py-1.5 rounded bg-card-border/20 text-xs font-medium text-muted hover:bg-card-border/30 transition-colors">2 tbl (20mg)</button>
+              </div>
+            )}
+            {selectedMedicationId === 'caffeine' && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                <button type="button" onClick={() => setDose('80')} className="px-3 py-1.5 rounded bg-card-border/20 text-xs font-medium text-muted hover:bg-card-border/30 transition-colors">Red Bull bez cukru (80mg)</button>
+                <button type="button" onClick={() => setDose('60')} className="px-3 py-1.5 rounded bg-card-border/20 text-xs font-medium text-muted hover:bg-card-border/30 transition-colors">Espresso (60mg)</button>
+                <button type="button" onClick={() => setDose('100')} className="px-3 py-1.5 rounded bg-card-border/20 text-xs font-medium text-muted hover:bg-card-border/30 transition-colors">Kofein. pilulka (100mg)</button>
+              </div>
+            )}
           </div>
 
           <div>
@@ -348,35 +353,23 @@ export default function QuickLogForm({ onLog, medications }: QuickLogFormProps) 
         </form>
       )}
 
-      {/* Mood Tab */}
-      {activeTab === 'mood' && (
-        <form onSubmit={handleLogMood} className="space-y-4">
-          <SliderInput label="Mood" value={mood} onChange={setMood} />
-          <SliderInput label="Focus" value={moodFocus} onChange={setMoodFocus} />
-          <SliderInput label="Anxiety" value={anxiety} onChange={setAnxiety} />
+      {/* State Tab (Combined Mood & Focus) */}
+      {activeTab === 'state' && (
+        <form onSubmit={handleLogState} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+            <SliderInput label="Nálada (Mood)" value={mood} onChange={setMood} />
+            <SliderInput label="Soustředění (Focus)" value={moodFocus} onChange={setMoodFocus} />
+            <SliderInput label="Energie (Energy)" value={energy} onChange={setEnergy} />
+            <SliderInput label="Jasnost (Clarity)" value={clarity} onChange={setClarity} />
+            <SliderInput label="Úzkost (Anxiety)" value={anxiety} onChange={setAnxiety} />
+          </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full btn-primary disabled:opacity-50"
+            className="w-full btn-primary disabled:opacity-50 mt-4"
           >
-            {loading ? 'Logging...' : 'Log Mood'}
-          </button>
-        </form>
-      )}
-
-      {/* Focus Tab */}
-      {activeTab === 'focus' && (
-        <form onSubmit={handleLogFocus} className="space-y-4">
-          <SliderInput label="Focus Level" value={focusLevel} onChange={setFocusLevel} />
-          <SliderInput label="Clarity" value={clarity} onChange={setClarity} />
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full btn-primary disabled:opacity-50"
-          >
-            {loading ? 'Logging...' : 'Log Focus'}
+            {loading ? 'Logging...' : 'Uložit stav'}
           </button>
         </form>
       )}
@@ -439,6 +432,7 @@ export default function QuickLogForm({ onLog, medications }: QuickLogFormProps) 
           </button>
         </form>
       )}
+      </div>
     </div>
   );
 }

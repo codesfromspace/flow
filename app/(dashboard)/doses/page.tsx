@@ -92,11 +92,13 @@ export default function DosesPage() {
   };
 
   return (
-    <div className="grid h-full grid-cols-1 gap-4 lg:grid-cols-[420px_1fr]">
-      <QuickLogForm 
-        onLog={addCognitiveLog} 
-        medications={medications.length > 0 ? medications : Object.values(MEDICATION_PRESETS)} 
-      />
+    <div className="grid h-full grid-cols-1 gap-4 lg:grid-cols-[420px_1fr] min-h-0">
+      <div className="overflow-y-auto pr-1 flex flex-col min-h-0 pb-12">
+        <QuickLogForm 
+          onLog={addCognitiveLog} 
+          medications={medications.length > 0 ? medications : Object.values(MEDICATION_PRESETS)} 
+        />
+      </div>
       <div className="card-base min-h-0 flex flex-col p-5">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-lg font-semibold">Historie záznamů</h3>
@@ -131,9 +133,23 @@ export default function DosesPage() {
                         <div key={log.id} className="flex flex-col gap-3 rounded-xl border border-accent-cyan/50 bg-accent-cyan/5 px-4 py-3">
                           <div className="flex items-center gap-2">
                             {log.type === 'medication' && (
-                              <div className="flex-1">
+                              <div className="flex-1 w-full">
                                 <label className="text-xs text-muted mb-1 block">Dávka (mg)</label>
                                 <input type="number" step="0.1" className="input-base" value={editDose} onChange={e => setEditDose(e.target.value)} />
+                                {log.original.data.medicationId === 'methylphenidate-ir' && (
+                                  <div className="flex flex-wrap gap-2 mt-2">
+                                    <button type="button" onClick={() => setEditDose('5')} className="px-3 py-1.5 rounded bg-card-border/20 text-xs font-medium text-muted hover:bg-card-border/30 transition-colors">1/2 tbl (5mg)</button>
+                                    <button type="button" onClick={() => setEditDose('10')} className="px-3 py-1.5 rounded bg-card-border/20 text-xs font-medium text-muted hover:bg-card-border/30 transition-colors">1 tbl (10mg)</button>
+                                    <button type="button" onClick={() => setEditDose('20')} className="px-3 py-1.5 rounded bg-card-border/20 text-xs font-medium text-muted hover:bg-card-border/30 transition-colors">2 tbl (20mg)</button>
+                                  </div>
+                                )}
+                                {log.original.data.medicationId === 'caffeine' && (
+                                  <div className="flex flex-wrap gap-2 mt-2">
+                                    <button type="button" onClick={() => setEditDose('80')} className="px-3 py-1.5 rounded bg-card-border/20 text-xs font-medium text-muted hover:bg-card-border/30 transition-colors">Red Bull bez cukru (80mg)</button>
+                                    <button type="button" onClick={() => setEditDose('60')} className="px-3 py-1.5 rounded bg-card-border/20 text-xs font-medium text-muted hover:bg-card-border/30 transition-colors">Espresso (60mg)</button>
+                                    <button type="button" onClick={() => setEditDose('100')} className="px-3 py-1.5 rounded bg-card-border/20 text-xs font-medium text-muted hover:bg-card-border/30 transition-colors">Kofein. pilulka (100mg)</button>
+                                  </div>
+                                )}
                               </div>
                             )}
                             <div className="flex-[2]">
