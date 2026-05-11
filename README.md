@@ -1,37 +1,36 @@
 # Flow
 
-Local-first cognitive tracking dashboard for logging medication doses, focus, mood, sleep pressure, hydration context, and daily activation trends.
+Personal dashboard for tracking medication doses, focus, mood, sleep, and daily energy — built to run entirely in your browser with no external services.
 
-## What It Does
+## Features
 
-- Stores all logs locally in IndexedDB.
-- Models medication activation deterministically from dose time, dose amount, onset, peak, half-life, duration, and medication strength.
-- Lets doses be logged for now, 15 minutes ago, 30 minutes ago, or a custom time.
-- Supports custom medication profiles from the settings modal.
-- Provides reorderable dashboard widgets with persisted widget order.
-- Exports local logs as Markdown.
+**Dose logging** — log a dose now, 15/30 minutes ago, or at a custom time. Flow models activation deterministically using onset, peak, half-life, and duration per medication.
 
-## Run
+**Dashboard widgets** — reorderable widgets for activation trends, hydration, mood, and more. Widget order persists between sessions.
+
+**Custom medications** — define your own medication profiles (strength, timing parameters) from the settings modal.
+
+**Local-first storage** — all data lives in IndexedDB in your browser. Nothing leaves your device. Export logs as Markdown at any time.
+
+## Getting Started
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open `http://localhost:3001`.
-
-## Build
+Then open [http://localhost:3001](http://localhost:3001).
 
 ```bash
-npm run build
+npm run build   # production build
 ```
 
-The project should live in a path without a literal backslash character. A directory named `claude\ code` can break Node/Next module resolution because package paths become invalid encoded `file://` URLs.
+> **Note:** Keep the project in a path without backslashes. A directory named `claude\ code` can break Node/Next.js module resolution.
 
-## Data And Privacy
+## Privacy
 
-Flow is local-first. It does not sync data to an external service. Clearing browser storage or deleting IndexedDB data removes the app's stored logs and settings.
+Flow does not sync or transmit data anywhere. Clearing browser storage or deleting IndexedDB data permanently removes all stored logs and settings.
 
 ## Medical Disclaimer
 
-This app is for personal tracking and estimation only. It is not medical advice, diagnosis, or dosage guidance. Medication timing, dose changes, side effects, and treatment decisions should be handled with a qualified clinician.
+Flow is a personal tracking tool, not a medical device. Nothing in it constitutes medical advice, diagnosis, or dosage guidance. Consult a qualified clinician for any medication-related decisions.
