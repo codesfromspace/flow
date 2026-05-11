@@ -1,4 +1,11 @@
-import { EffectiveRange, MedicationProfile, MedicationReleaseType } from '@/types';
+import {
+  EffectiveRange,
+  MedicationDoseForm,
+  MedicationProfile,
+  MedicationReleaseType,
+  StimulantClass,
+  UserProfile,
+} from '@/types';
 
 export const MEDICATION_PRESETS: Record<string, MedicationProfile> = {
   'amphetamine-ir': {
@@ -12,6 +19,9 @@ export const MEDICATION_PRESETS: Record<string, MedicationProfile> = {
     defaultDose: 10,
     referenceDose: 10,
     releaseType: 'instant',
+    doseForm: 'tablet',
+    bioavailability: 1,
+    stimulantClass: 'amphetamine',
   },
   'methylphenidate-ir': {
     id: 'methylphenidate-ir',
@@ -24,6 +34,9 @@ export const MEDICATION_PRESETS: Record<string, MedicationProfile> = {
     defaultDose: 10,
     referenceDose: 10,
     releaseType: 'instant',
+    doseForm: 'tablet',
+    bioavailability: 1,
+    stimulantClass: 'methylphenidate',
   },
   'methylphenidate-xr': {
     id: 'methylphenidate-xr',
@@ -36,6 +49,9 @@ export const MEDICATION_PRESETS: Record<string, MedicationProfile> = {
     defaultDose: 18,
     referenceDose: 18,
     releaseType: 'extended',
+    doseForm: 'capsule',
+    bioavailability: 1,
+    stimulantClass: 'methylphenidate',
   },
   caffeine: {
     id: 'caffeine',
@@ -48,6 +64,9 @@ export const MEDICATION_PRESETS: Record<string, MedicationProfile> = {
     defaultDose: 100,
     referenceDose: 100,
     releaseType: 'instant',
+    doseForm: 'liquid',
+    bioavailability: 1,
+    stimulantClass: 'caffeine',
   },
 };
 
@@ -56,6 +75,16 @@ export interface DoseEvent {
   dose: number;
   profile: MedicationProfile;
   releaseType?: MedicationReleaseType;
+  doseForm?: MedicationDoseForm;
+  bioavailability?: number;
+}
+
+export interface ConcentrationOptions {
+  userProfile?: UserProfile;
+}
+
+export interface CumulativeConcentrationOptions extends ConcentrationOptions {
+  includeSynergy?: boolean;
 }
 
 export const DEFAULT_EFFECTIVE_RANGE: EffectiveRange = {
@@ -65,6 +94,14 @@ export const DEFAULT_EFFECTIVE_RANGE: EffectiveRange = {
 };
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
+const DEFAULT_BIOAVAILABILITY_BY_FORM: Record<MedicationDoseForm, number> = {
+  tablet: 0.85,
+  capsule: 0.9,
+  liquid: 0.95,
+  patch: 0.65,
+  other: 0.85,
+};
 
 const decayFromHalfLife = (elapsedMinutes: number, halfLifeHours: number) => {
   const halfLifeMinutes = Math.max(halfLifeHours * 60, 1);
@@ -76,18 +113,48 @@ const smoothStep = (progress: number) => {
   return t * t * (3 - 2 * t);
 };
 
-export function calculateDoseConcentration(event: DoseEvent, currentTime: number) {
+const normalizeBioavailability = (value?: number, doseForm?: MedicationDoseForm) => {
+  const fallback = doseForm ? DEFAULT_BIOAVAILABILITY_BY_FORM[doseForm] : 1;
+  return clamp(value ?? fallback, 0.05, 1.2);
+};
+
+const calculateUserSensitivity = (userProfile?: UserProfile) => {
+  const weight = userProfile?.weight;
+  const age = userProfile?.age;
+  const weightSensitivity = weight ? clamp(Math.pow(70 / clamp(weight, 35, 160), 0.35), 0.75, 1.3) : 1;
+  const ageSensitivity = age ? clamp(1 + (clamp(age, 18, 90) - 40) * 0.003, 0.92, 1.15) : 1;
+
+  return weightSensitivity * ageSensitivity;
+};
+
+const calculateHalfLifeModifier = (userProfile?: UserProfile) => {
+  const age = userProfile?.age;
+  if (!age) return 1;
+  return clamp(1 + (clamp(age, 18, 90) - 45) * 0.004, 0.9, 1.18);
+};
+
+const getStimulantClass = (event: DoseEvent): StimulantClass => event.profile.stimulantClass ?? 'other';
+
+export function calculateDoseConcentration(
+  event: DoseEvent,
+  currentTime: number,
+  options: ConcentrationOptions = {}
+) {
   if (currentTime < event.timestamp || event.dose <= 0) return 0;
 
   const elapsedMinutes = (currentTime - event.timestamp) / 60000;
   const { onset, peak, halfLife, duration, strength } = event.profile;
   const releaseType = event.releaseType ?? event.profile.releaseType ?? 'instant';
+  const doseForm = event.doseForm ?? event.profile.doseForm;
+  const bioavailability = normalizeBioavailability(event.bioavailability ?? event.profile.bioavailability, doseForm);
+  const userSensitivity = calculateUserSensitivity(options.userProfile);
+  const adjustedHalfLife = halfLife * calculateHalfLifeModifier(options.userProfile);
 
   if (elapsedMinutes >= duration) return 0;
 
   const referenceDose = event.profile.referenceDose ?? event.profile.defaultDose ?? 10;
   const doseScale = event.dose / Math.max(referenceDose, 1);
-  const peakLevel = Math.max(0, doseScale * strength * 0.52);
+  const peakLevel = Math.max(0, doseScale * strength * bioavailability * userSensitivity * 0.52);
 
   if (releaseType === 'extended') {
     const absorptionWindow = Math.max(peak - onset, 1);
@@ -100,7 +167,7 @@ export function calculateDoseConcentration(event: DoseEvent, currentTime: number
     }
 
     const timeSincePlateau = elapsedMinutes - plateauEnd;
-    const decay = decayFromHalfLife(timeSincePlateau, halfLife);
+    const decay = decayFromHalfLife(timeSincePlateau, adjustedHalfLife);
     return Math.max(0, peakLevel * 0.82 * decay);
   }
 
@@ -114,27 +181,46 @@ export function calculateDoseConcentration(event: DoseEvent, currentTime: number
   }
 
   const timeSincePeak = elapsedMinutes - peak;
-  const decay = decayFromHalfLife(timeSincePeak, halfLife);
+  const decay = decayFromHalfLife(timeSincePeak, adjustedHalfLife);
   return Math.max(0, peakLevel * decay);
 }
 
-export function calculateCumulativeConcentration(doseEvents: DoseEvent[], currentTime: number) {
-  let total = 0;
+export function calculateCumulativeConcentration(
+  doseEvents: DoseEvent[],
+  currentTime: number,
+  options: CumulativeConcentrationOptions = {}
+) {
+  let rawTotal = 0;
   const byMedication: Record<string, number> = {};
+  const byClass: Partial<Record<StimulantClass, number>> = {};
 
   for (const event of doseEvents) {
-    const concentration = calculateDoseConcentration(event, currentTime);
+    const concentration = calculateDoseConcentration(event, currentTime, options);
     if (concentration <= 0) continue;
 
-    total += concentration;
+    rawTotal += concentration;
     byMedication[event.profile.name] = (byMedication[event.profile.name] ?? 0) + concentration;
+    const stimulantClass = getStimulantClass(event);
+    byClass[stimulantClass] = (byClass[stimulantClass] ?? 0) + concentration;
   }
 
+  const primaryStimulant = (byClass.amphetamine ?? 0) + (byClass.methylphenidate ?? 0);
+  const caffeine = byClass.caffeine ?? 0;
+  const mixedPrescriptionStimulants = Math.min(byClass.amphetamine ?? 0, byClass.methylphenidate ?? 0);
+  const caffeineSynergy = options.includeSynergy === false ? 0 : Math.min(primaryStimulant, caffeine) * 0.12;
+  const medicationSynergy = options.includeSynergy === false ? 0 : mixedPrescriptionStimulants * 0.08;
+  const synergy = clamp(caffeineSynergy + medicationSynergy, 0, rawTotal * 0.18);
+
   return {
-    total: Math.max(0, total),
+    total: Math.max(0, rawTotal + synergy),
+    rawTotal: Math.max(0, rawTotal),
+    synergy: Math.max(0, synergy),
     byMedication: Object.fromEntries(
       Object.entries(byMedication).map(([name, value]) => [name, Math.max(0, value)])
     ),
+    byClass: Object.fromEntries(
+      Object.entries(byClass).map(([name, value]) => [name, Math.max(0, value ?? 0)])
+    ) as Partial<Record<StimulantClass, number>>,
   };
 }
 

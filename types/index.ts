@@ -1,6 +1,8 @@
 export type LogType = 'medication' | 'mood' | 'focus' | 'state_check' | 'note' | 'sleep' | 'deep_work';
 
 export type MedicationReleaseType = 'instant' | 'extended';
+export type MedicationDoseForm = 'tablet' | 'capsule' | 'liquid' | 'patch' | 'other';
+export type StimulantClass = 'amphetamine' | 'methylphenidate' | 'caffeine' | 'other';
 
 interface BaseLog<TType extends LogType, TData> {
   id: string;
@@ -15,6 +17,8 @@ export type MedicationLog = BaseLog<'medication', {
   dose: number;
   doseUnit: 'mg';
   releaseType: MedicationReleaseType;
+  doseForm?: MedicationDoseForm;
+  bioavailability?: number;
   takenAt: number;
 }>;
 
@@ -74,6 +78,9 @@ export interface MedicationProfile {
   defaultDose?: number;
   referenceDose?: number;
   releaseType?: MedicationReleaseType;
+  doseForm?: MedicationDoseForm;
+  bioavailability?: number;
+  stimulantClass?: StimulantClass;
 }
 
 export interface UserProfile {

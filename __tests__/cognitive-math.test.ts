@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { 
+  calculateCumulativeConcentration,
   calculateDoseConcentration,
   calculateSleepPressure, 
   estimateStimulantEffect,
@@ -69,6 +70,85 @@ describe('Cognitive Math', () => {
       }, currentTime);
 
       expect(extended).toBeGreaterThan(instant);
+    });
+
+    it('scales concentration by bioavailability', () => {
+      const now = Date.now();
+      const currentTime = now + 90 * 60 * 1000;
+      const fullAvailability = calculateDoseConcentration({
+        timestamp: now,
+        dose: 10,
+        profile: MEDICATION_PRESETS['methylphenidate-ir'],
+        bioavailability: 1,
+      }, currentTime);
+      const lowerAvailability = calculateDoseConcentration({
+        timestamp: now,
+        dose: 10,
+        profile: MEDICATION_PRESETS['methylphenidate-ir'],
+        bioavailability: 0.5,
+      }, currentTime);
+
+      expect(lowerAvailability).toBeCloseTo(fullAvailability * 0.5);
+    });
+
+    it('adjusts dose sensitivity by user weight', () => {
+      const now = Date.now();
+      const currentTime = now + 90 * 60 * 1000;
+      const lighterUser = calculateDoseConcentration({
+        timestamp: now,
+        dose: 10,
+        profile: MEDICATION_PRESETS['methylphenidate-ir'],
+      }, currentTime, { userProfile: { weight: 50 } });
+      const heavierUser = calculateDoseConcentration({
+        timestamp: now,
+        dose: 10,
+        profile: MEDICATION_PRESETS['methylphenidate-ir'],
+      }, currentTime, { userProfile: { weight: 100 } });
+
+      expect(lighterUser).toBeGreaterThan(heavierUser);
+    });
+
+    it('extends tail concentration for older age profiles', () => {
+      const now = Date.now();
+      const currentTime = now + 4 * 60 * 60 * 1000;
+      const youngerUser = calculateDoseConcentration({
+        timestamp: now,
+        dose: 10,
+        profile: MEDICATION_PRESETS['methylphenidate-ir'],
+      }, currentTime, { userProfile: { age: 25 } });
+      const olderUser = calculateDoseConcentration({
+        timestamp: now,
+        dose: 10,
+        profile: MEDICATION_PRESETS['methylphenidate-ir'],
+      }, currentTime, { userProfile: { age: 70 } });
+
+      expect(olderUser).toBeGreaterThan(youngerUser);
+    });
+  });
+
+  describe('calculateCumulativeConcentration', () => {
+    it('adds a conservative synergy bonus between caffeine and prescription stimulants', () => {
+      const now = Date.now();
+      const currentTime = now + 60 * 60 * 1000;
+      const doses = [
+        {
+          timestamp: now,
+          dose: 10,
+          profile: MEDICATION_PRESETS['methylphenidate-ir'],
+        },
+        {
+          timestamp: now,
+          dose: 100,
+          profile: MEDICATION_PRESETS.caffeine,
+        },
+      ];
+
+      const withoutSynergy = calculateCumulativeConcentration(doses, currentTime, { includeSynergy: false });
+      const withSynergy = calculateCumulativeConcentration(doses, currentTime);
+
+      expect(withSynergy.rawTotal).toBeCloseTo(withoutSynergy.total);
+      expect(withSynergy.synergy).toBeGreaterThan(0);
+      expect(withSynergy.total).toBeGreaterThan(withoutSynergy.total);
     });
   });
 

@@ -2,6 +2,9 @@
 
 import React from 'react';
 import { useCognitiveState } from '@/lib/context/CognitiveStateContext';
+import { CognitiveLog, SleepLog } from '@/types';
+
+const isSleepLog = (log: CognitiveLog): log is SleepLog => log.logType === 'sleep';
 
 export default function DailySummary() {
   const { todayEvents, logs, dayStart } = useCognitiveState();
@@ -21,7 +24,7 @@ export default function DailySummary() {
     }
   };
 
-  const wakeLog = logs.find(l => l.logType === 'sleep' && l.data.date === dayStart);
+  const wakeLog = logs.find((log): log is SleepLog => isSleepLog(log) && log.data.date === dayStart);
   
   return (
     <div className="card-base p-6 border-l-4 border-l-accent-cyan">

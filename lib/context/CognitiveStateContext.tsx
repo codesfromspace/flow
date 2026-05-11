@@ -133,10 +133,12 @@ export function CognitiveStateProvider({ children }: { children: React.ReactNode
             dose: log.data.dose,
             profile,
             releaseType: log.data.releaseType,
+            doseForm: log.data.doseForm,
+            bioavailability: log.data.bioavailability,
           }];
         });
 
-      const { total: concentration, byMedication } = calculateCumulativeConcentration(recentDoses, now);
+      const { total: concentration, byMedication } = calculateCumulativeConcentration(recentDoses, now, { userProfile });
       setFocusLevel(Math.round(estimateFocusFromConcentration(concentration, 50, effectiveRange)));
       setReboundRisk(estimateReboundRisk(concentration));
 
