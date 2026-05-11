@@ -132,6 +132,7 @@ export function CognitiveStateProvider({ children }: { children: React.ReactNode
             timestamp: log.data.takenAt ?? log.timestamp.getTime(),
             dose: log.data.dose,
             profile,
+            releaseType: log.data.releaseType,
           }];
         });
 

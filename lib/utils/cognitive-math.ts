@@ -1,4 +1,4 @@
-import { EffectiveRange, MedicationProfile } from '@/types';
+import { EffectiveRange, MedicationProfile, MedicationReleaseType } from '@/types';
 
 export const MEDICATION_PRESETS: Record<string, MedicationProfile> = {
   'amphetamine-ir': {
@@ -55,6 +55,7 @@ export interface DoseEvent {
   timestamp: number;
   dose: number;
   profile: MedicationProfile;
+  releaseType?: MedicationReleaseType;
 }
 
 export const DEFAULT_EFFECTIVE_RANGE: EffectiveRange = {
@@ -65,11 +66,22 @@ export const DEFAULT_EFFECTIVE_RANGE: EffectiveRange = {
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
+const decayFromHalfLife = (elapsedMinutes: number, halfLifeHours: number) => {
+  const halfLifeMinutes = Math.max(halfLifeHours * 60, 1);
+  return Math.exp(-(Math.LN2 / halfLifeMinutes) * Math.max(0, elapsedMinutes));
+};
+
+const smoothStep = (progress: number) => {
+  const t = clamp(progress, 0, 1);
+  return t * t * (3 - 2 * t);
+};
+
 export function calculateDoseConcentration(event: DoseEvent, currentTime: number) {
   if (currentTime < event.timestamp || event.dose <= 0) return 0;
 
   const elapsedMinutes = (currentTime - event.timestamp) / 60000;
   const { onset, peak, halfLife, duration, strength } = event.profile;
+  const releaseType = event.releaseType ?? event.profile.releaseType ?? 'instant';
 
   if (elapsedMinutes >= duration) return 0;
 
@@ -77,18 +89,32 @@ export function calculateDoseConcentration(event: DoseEvent, currentTime: number
   const doseScale = event.dose / Math.max(referenceDose, 1);
   const peakLevel = Math.max(0, doseScale * strength * 0.52);
 
+  if (releaseType === 'extended') {
+    const absorptionWindow = Math.max(peak - onset, 1);
+    const ramp = smoothStep((elapsedMinutes - onset * 0.5) / absorptionWindow);
+    const plateauEnd = Math.min(duration * 0.65, peak + absorptionWindow);
+
+    if (elapsedMinutes <= plateauEnd) {
+      const plateauDrift = 1 - clamp((elapsedMinutes - peak) / Math.max(plateauEnd - peak, 1), 0, 1) * 0.18;
+      return Math.max(0, peakLevel * ramp * plateauDrift);
+    }
+
+    const timeSincePlateau = elapsedMinutes - plateauEnd;
+    const decay = decayFromHalfLife(timeSincePlateau, halfLife);
+    return Math.max(0, peakLevel * 0.82 * decay);
+  }
+
   if (elapsedMinutes <= onset) {
-    return Math.max(0, (elapsedMinutes / Math.max(onset, 1)) * peakLevel * 0.65);
+    return Math.max(0, smoothStep(elapsedMinutes / Math.max(onset, 1)) * peakLevel * 0.65);
   }
 
   if (elapsedMinutes <= peak) {
     const riseProgress = (elapsedMinutes - onset) / Math.max(peak - onset, 1);
-    return Math.max(0, peakLevel * (0.65 + riseProgress * 0.35));
+    return Math.max(0, peakLevel * (0.65 + smoothStep(riseProgress) * 0.35));
   }
 
   const timeSincePeak = elapsedMinutes - peak;
-  const halfLifeMinutes = Math.max(halfLife * 60, 1);
-  const decay = Math.exp(-(Math.LN2 / halfLifeMinutes) * timeSincePeak);
+  const decay = decayFromHalfLife(timeSincePeak, halfLife);
   return Math.max(0, peakLevel * decay);
 }
 
@@ -119,12 +145,25 @@ export function normalizeEffectiveRange(range?: EffectiveRange): EffectiveRange 
   return { lower, upper, optimal };
 }
 
-export function estimateFocusFromConcentration(concentration: number, baseline: number = 50, range?: EffectiveRange) {
+export function estimateStimulantEffect(concentration: number, range?: EffectiveRange) {
   const effectiveRange = normalizeEffectiveRange(range);
-  const underTargetGain = Math.min(concentration, effectiveRange.optimal) * 88;
+  const target = Math.max(effectiveRange.optimal, 0.01);
+  const activation = Math.min(concentration, target) / target;
   const aboveTarget = Math.max(0, concentration - effectiveRange.upper);
-  const overstimulationPenalty = aboveTarget * 85;
-  return clamp(baseline + underTargetGain - overstimulationPenalty, 0, 100);
+  const overstimulation = aboveTarget / Math.max(1 - effectiveRange.upper, 0.01);
+
+  return {
+    activation: clamp(activation, 0, 1),
+    overstimulation: clamp(overstimulation, 0, 1),
+    score: clamp(activation * 100 - overstimulation * 45, 0, 100),
+  };
+}
+
+export function estimateFocusFromConcentration(concentration: number, baseline: number = 50, range?: EffectiveRange) {
+  const stimulantEffect = estimateStimulantEffect(concentration, range);
+  const focusGain = stimulantEffect.activation * 34;
+  const overstimulationPenalty = stimulantEffect.overstimulation * 30;
+  return clamp(baseline + focusGain - overstimulationPenalty, 0, 100);
 }
 
 export function estimateReboundRisk(concentration: number): 'none' | 'low' | 'medium' | 'high' {
